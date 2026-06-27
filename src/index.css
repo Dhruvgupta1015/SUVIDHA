@@ -3,69 +3,69 @@
 @config "../tailwind.config.js";
 
 :root {
-  --color-kiosk-dark: #f8fafc;
-  --color-kiosk-navy: #ffffff;
-  --color-kiosk-accent: #f1f5f9;
-  --color-kiosk-teal: #0284c7;
-  --color-kiosk-mint: #059669;
+  --color-kiosk-dark: #f3f4f6; /* light grey body background */
+  --color-kiosk-navy: #ffffff; /* pure white content panels */
+  --color-kiosk-accent: #e5e7eb; /* clean border color */
+  --color-kiosk-teal: #1d4ed8; /* GOI Royal Blue accent */
+  --color-kiosk-mint: #16a34a; /* CSC Green accent */
   --color-kiosk-gold: #d97706;
   --color-kiosk-crimson: #dc2626;
 
-  --color-slate-100: #0f172a;
-  --color-slate-200: #1e293b;
-  --color-slate-300: #334155;
-  --color-slate-400: #475569;
-  --color-slate-500: #64748b;
-  --color-slate-600: #cbd5e1;
-  --color-white: #0f172a;
+  --color-slate-100: #111827; /* dark grey text for high contrast readability */
+  --color-slate-200: #1f2937;
+  --color-slate-300: #374151;
+  --color-slate-400: #4b5563;
+  --color-slate-500: #6b7280;
+  --color-slate-600: #d1d5db;
+  --color-white: #111827; /* dark color text override */
 
-  --color-border-opacity: rgba(15, 23, 42, 0.08);
-  --color-glass-bg: rgba(255, 255, 255, 0.85);
-  --color-glass-border: rgba(15, 23, 42, 0.08);
+  --color-border-opacity: rgba(17, 24, 39, 0.08);
+  --color-glass-bg: #ffffff;
+  --color-glass-border: #e5e7eb;
 }
 
 .light {
-  --color-kiosk-dark: #f8fafc;
+  --color-kiosk-dark: #f3f4f6;
   --color-kiosk-navy: #ffffff;
-  --color-kiosk-accent: #f1f5f9;
-  --color-kiosk-teal: #0284c7;
-  --color-kiosk-mint: #059669;
+  --color-kiosk-accent: #e5e7eb;
+  --color-kiosk-teal: #1d4ed8;
+  --color-kiosk-mint: #16a34a;
   --color-kiosk-gold: #d97706;
   --color-kiosk-crimson: #dc2626;
 
-  --color-slate-100: #0f172a;
-  --color-slate-200: #1e293b;
-  --color-slate-300: #334155;
-  --color-slate-400: #475569;
-  --color-slate-500: #64748b;
-  --color-slate-600: #cbd5e1;
-  --color-white: #0f172a;
+  --color-slate-100: #111827;
+  --color-slate-200: #1f2937;
+  --color-slate-300: #374151;
+  --color-slate-400: #4b5563;
+  --color-slate-500: #6b7280;
+  --color-slate-600: #d1d5db;
+  --color-white: #111827;
 
-  --color-border-opacity: rgba(15, 23, 42, 0.08);
-  --color-glass-bg: rgba(255, 255, 255, 0.85);
-  --color-glass-border: rgba(15, 23, 42, 0.08);
+  --color-border-opacity: rgba(17, 24, 39, 0.08);
+  --color-glass-bg: #ffffff;
+  --color-glass-border: #e5e7eb;
 }
 
 .dark {
-  --color-kiosk-dark: #0a0f1d;
-  --color-kiosk-navy: #151e36;
-  --color-kiosk-accent: #233256;
-  --color-kiosk-teal: #0df5e3;
-  --color-kiosk-mint: #10b981;
-  --color-kiosk-gold: #eab308;
+  --color-kiosk-dark: #0f172a;
+  --color-kiosk-navy: #1e293b;
+  --color-kiosk-accent: #334155;
+  --color-kiosk-teal: #3b82f6;
+  --color-kiosk-mint: #22c55e;
+  --color-kiosk-gold: #fbbf24;
   --color-kiosk-crimson: #ef4444;
 
-  --color-slate-100: #f1f5f9;
-  --color-slate-200: #e2e8f0;
-  --color-slate-300: #cbd5e1;
-  --color-slate-400: #94a3b8;
-  --color-slate-500: #64748b;
-  --color-slate-600: #475569;
+  --color-slate-100: #f9fafb;
+  --color-slate-200: #f3f4f6;
+  --color-slate-300: #e5e7eb;
+  --color-slate-400: #9ca3af;
+  --color-slate-500: #6b7280;
+  --color-slate-600: #4b5563;
   --color-white: #ffffff;
 
   --color-border-opacity: rgba(255, 255, 255, 0.05);
-  --color-glass-bg: rgba(255, 255, 255, 0.06);
-  --color-glass-border: rgba(255, 255, 255, 0.12);
+  --color-glass-bg: #1e293b;
+  --color-glass-border: #334155;
 }
 
 @layer base {
@@ -81,7 +81,7 @@
 
   /* Accessibility focus states */
   *:focus-visible {
-    outline: 3px solid rgba(13, 245, 227, 0.85);
+    outline: 3px solid rgba(29, 78, 216, 0.85);
     outline-offset: 2px;
   }
 }
@@ -106,12 +106,12 @@
   }
 
   .text-glow-teal {
-    text-shadow: 0 0 10px rgba(13, 245, 227, 0.6);
+    text-shadow: none;
   }
 
   .glow-border {
-    box-shadow: 0 0 15px rgba(13, 245, 227, 0.2);
-    border-color: rgba(13, 245, 227, 0.4);
+    box-shadow: none;
+    border-color: var(--color-kiosk-accent);
   }
 
   /* Core Animations */

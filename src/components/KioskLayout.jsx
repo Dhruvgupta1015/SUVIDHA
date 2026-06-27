@@ -40,36 +40,68 @@ export const KioskLayout = ({ children }) => {
     <div className={`min-h-screen flex flex-col transition-colors duration-300 ${
       highContrast 
         ? 'bg-black text-yellow-400' 
-        : 'bg-gradient-to-br from-kiosk-dark via-kiosk-dark to-slate-900 text-slate-100'
+        : 'bg-kiosk-dark text-slate-100'
     }`}>
+      {/* Top Bilingual GOI Stripe */}
+      <div className={`text-[10px] py-2 px-6 select-none font-bold flex justify-between items-center border-b ${
+        highContrast 
+          ? 'bg-black border-yellow-400 text-yellow-400' 
+          : 'bg-kiosk-teal text-white border-white/10'
+      }`}>
+        <div className="flex gap-2">
+          <span>GOVERNMENT OF INDIA</span>
+          <span>•</span>
+          <span>भारत सरकार</span>
+        </div>
+        <div className="flex gap-3">
+          <span>Digital India Initiative</span>
+          <span>•</span>
+          <span>डिजिटल इंडिया</span>
+        </div>
+      </div>
+
       {/* 1. Kiosk Top Banner - Stats & Accessibility switches */}
       <header className={`px-6 py-4 border-b transition-all duration-300 ${
         highContrast 
           ? 'border-yellow-400 bg-black' 
-          : 'border-slate-800 bg-kiosk-navy/55 backdrop-blur-md'
+          : 'border-kiosk-accent bg-kiosk-navy shadow-sm'
       }`}>
-        <div className="max-w-7xl mx-auto flex flex-col md:flex-row md:items-center md:justify-between gap-4">
+        <div className="max-w-7xl mx-auto flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
           {/* Logo Brand */}
-          <div className="flex items-center gap-3">
-            <div className={`w-12 h-12 rounded-2xl flex items-center justify-center border shadow-kiosk-glow ${
+          <div className="flex items-center gap-3.5">
+            <div className={`w-12 h-12 flex items-center justify-center border rounded-xl select-none ${
               highContrast 
                 ? 'border-yellow-400 bg-black' 
-                : 'bg-kiosk-teal/10 border-kiosk-teal/40'
+                : 'bg-white/5 border-kiosk-accent'
             }`}>
-              <Cpu className={`w-6 h-6 animate-pulse ${highContrast ? 'text-yellow-400' : 'text-kiosk-teal'}`} />
+              <svg className={`w-8 h-8 ${highContrast ? 'text-yellow-400' : 'text-kiosk-teal'}`} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5">
+                <circle cx="12" cy="12" r="9" />
+                <circle cx="12" cy="12" r="3" />
+                {[...Array(12)].map((_, i) => (
+                  <line
+                    key={i}
+                    x1="12"
+                    y1="3"
+                    x2="12"
+                    y2="21"
+                    transform={`rotate(${i * 15} 12 12)`}
+                    strokeWidth="0.5"
+                  />
+                ))}
+              </svg>
             </div>
             <div>
               <Link 
                 to="/" 
-                className="font-outfit font-black text-2xl tracking-wider select-none flex items-center gap-1.5"
+                className="font-outfit font-black text-2xl tracking-wide select-none flex items-center gap-1.5"
                 onMouseEnter={speakElement}
               >
                 <span>SUVIDHA</span>
-                <span className={`text-[10px] uppercase px-2 py-0.5 rounded font-mono tracking-normal ${
-                  highContrast ? 'bg-yellow-400 text-black border border-black' : 'bg-kiosk-teal/10 text-kiosk-teal border border-kiosk-teal/20'
+                <span className={`text-[9px] font-mono px-2 py-0.5 rounded ${
+                  highContrast ? 'bg-yellow-400 text-black border border-black' : 'bg-kiosk-teal/15 text-kiosk-teal border border-kiosk-teal/20'
                 }`}>v2.0</span>
               </Link>
-              <p className="text-[10px] text-slate-400 tracking-wider">Qualcomm Snapdragon Multiverse Hackathon</p>
+              <p className="text-[9px] text-slate-400 font-bold uppercase tracking-wider">Bilingual Citizen Service Portal | नागरिक सेवा पोर्टल</p>
             </div>
           </div>
 
