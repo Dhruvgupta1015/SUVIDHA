@@ -1,6 +1,7 @@
 import express from 'express';
 import http from 'http';
-import { Server } from 'socket.io';\nimport cors from 'cors';
+import { Server } from 'socket.io';
+import cors from 'cors';
 import dotenv from 'dotenv';
 import path from 'path';
 import { fileURLToPath } from 'url';
@@ -39,13 +40,13 @@ const allowedOrigins = rawOrigins
 const corsOptions = {
   origin: allowedOrigins.length > 0
     ? (origin, callback) => {
-        // Allow requests with no origin (Postman, mobile apps, server-to-server)
-        if (!origin || allowedOrigins.includes(origin)) {
-          callback(null, true);
-        } else {
-          callback(new Error(`CORS blocked: origin ${origin} not in allowed list`));
-        }
+      // Allow requests with no origin (Postman, mobile apps, server-to-server)
+      if (!origin || allowedOrigins.includes(origin)) {
+        callback(null, true);
+      } else {
+        callback(new Error(`CORS blocked: origin ${origin} not in allowed list`));
       }
+    }
     : '*',
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
   allowedHeaders: ['Content-Type', 'Authorization'],
