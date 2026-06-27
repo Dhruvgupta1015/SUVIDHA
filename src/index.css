@@ -1,0 +1,194 @@
+@import "tailwindcss";
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Outfit:wght@300;400;500;600;700;800&display=swap');
+@config "../tailwind.config.js";
+
+@layer base {
+  body {
+    @apply bg-kiosk-dark text-slate-100 font-sans antialiased overflow-x-hidden select-none min-h-screen;
+    touch-action: manipulation;
+  }
+
+  #root {
+    @apply min-h-screen flex flex-col w-full max-w-none m-0 text-left border-none;
+  }
+
+  /* Accessibility focus states */
+  *:focus-visible {
+    outline: 3px solid rgba(13, 245, 227, 0.85);
+    outline-offset: 2px;
+  }
+}
+
+@layer utilities {
+  .glassmorphism {
+    background: rgba(255, 255, 255, 0.06);
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+    border: 1px solid rgba(255, 255, 255, 0.12);
+  }
+  
+  .glassmorphism-dark {
+    background: rgba(21, 30, 54, 0.7);
+    backdrop-filter: blur(16px);
+    -webkit-backdrop-filter: blur(16px);
+    border: 1px solid rgba(255, 255, 255, 0.04);
+  }
+
+  .kiosk-btn {
+    @apply active:scale-95 transition-all duration-150 select-none cursor-pointer;
+  }
+
+  .text-glow-teal {
+    text-shadow: 0 0 10px rgba(13, 245, 227, 0.6);
+  }
+
+  .glow-border {
+    box-shadow: 0 0 15px rgba(13, 245, 227, 0.2);
+    border-color: rgba(13, 245, 227, 0.4);
+  }
+
+  /* Core Animations */
+  .animate-fade-in {
+    animation: fadeIn 0.4s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+  }
+
+  .animate-spin-slow {
+    animation: spinSlow 8s linear infinite;
+  }
+
+  .animate-bounce-slow {
+    animation: bounceSlow 3s ease-in-out infinite;
+  }
+
+  .animate-dash {
+    stroke-dashoffset: -40;
+    animation: dashPulse 1.8s linear infinite;
+  }
+}
+
+/* Custom Scrollbars */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+::-webkit-scrollbar-track {
+  background: rgba(10, 15, 29, 0.6);
+}
+
+::-webkit-scrollbar-thumb {
+  background: rgba(91, 192, 190, 0.2);
+  border-radius: 9999px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: rgba(13, 245, 227, 0.5);
+}
+
+/* Animations Keyframes */
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes spinSlow {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+@keyframes bounceSlow {
+  0%, 100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(-6px);
+  }
+}
+
+@keyframes dashPulse {
+  to {
+    stroke-dashoffset: -40;
+  }
+}
+
+@keyframes voice-pulse {
+  0%, 100% {
+    transform: scale(1);
+    opacity: 0.5;
+    box-shadow: 0 0 0 0 rgba(13, 245, 227, 0.6);
+  }
+  50% {
+    transform: scale(1.06);
+    opacity: 0.85;
+    box-shadow: 0 0 15px 6px rgba(13, 245, 227, 0.25);
+  }
+}
+
+.voice-active-pulse {
+  animation: voice-pulse 2s infinite ease-in-out;
+}
+
+/* Accessibility font scaling on root html */
+html.text-scale-normal {
+  font-size: 16px;
+}
+html.text-scale-large {
+  font-size: 18px;
+}
+html.text-scale-extra {
+  font-size: 20px;
+}
+
+/* High contrast overrides */
+html.high-contrast {
+  --color-kiosk-dark: #000000;
+  --color-kiosk-navy: #000000;
+  --color-kiosk-accent: #000000;
+  --color-kiosk-teal: #ffff00;
+  --color-slate-100: #ffff00;
+  --color-slate-200: #ffff00;
+  --color-slate-300: #ffffff;
+  --color-slate-400: #ffffff;
+  --color-slate-500: #ffffff;
+  background-color: #000000 !important;
+  color: #ffff00 !important;
+}
+
+html.high-contrast * {
+  border-color: #ffff00 !important;
+  color: #ffff00 !important;
+  background-color: #000000 !important;
+  box-shadow: none !important;
+  text-shadow: none !important;
+  background-image: none !important;
+}
+
+html.high-contrast button, 
+html.high-contrast a,
+html.high-contrast select,
+html.high-contrast input,
+html.high-contrast textarea {
+  border: 2px solid #ffff00 !important;
+}
+
+html.high-contrast button:hover, 
+html.high-contrast a:hover {
+  background-color: #ffff00 !important;
+  color: #000000 !important;
+}
+
+html.high-contrast button:hover *, 
+html.high-contrast a:hover * {
+  color: #000000 !important;
+  background-color: #ffff00 !important;
+}
