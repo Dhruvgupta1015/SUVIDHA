@@ -1,7 +1,6 @@
 import express from 'express';
 import http from 'http';
-import { Server } from 'socket.io';
-import cors from 'cors';
+import { Server } from 'socket.io';\nimport cors from 'cors';
 import dotenv from 'dotenv';
 import path from 'path';
 import { fileURLToPath } from 'url';
@@ -28,11 +27,37 @@ connectDB();
 const app = express();
 const server = http.createServer(app);
 
-// Configure Socket.io server with CORS parameters
+// ── CORS: allowed origins are read from env (comma-separated list)
+// Example: ALLOWED_ORIGINS=https://suvidha.vercel.app,https://your-app.vercel.app
+const rawOrigins = process.env.ALLOWED_ORIGINS || '';
+const allowedOrigins = rawOrigins
+  .split(',')
+  .map(o => o.trim())
+  .filter(Boolean);
+
+// In development or if no origins configured, allow all (for local testing)
+const corsOptions = {
+  origin: allowedOrigins.length > 0
+    ? (origin, callback) => {
+        // Allow requests with no origin (Postman, mobile apps, server-to-server)
+        if (!origin || allowedOrigins.includes(origin)) {
+          callback(null, true);
+        } else {
+          callback(new Error(`CORS blocked: origin ${origin} not in allowed list`));
+        }
+      }
+    : '*',
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+  allowedHeaders: ['Content-Type', 'Authorization'],
+  credentials: true
+};
+
+// Configure Socket.io server with same CORS policy
 const io = new Server(server, {
   cors: {
-    origin: "*", // allow access from any frontend origin during hackathon dev
-    methods: ["GET", "POST", "PUT", "DELETE"]
+    origin: allowedOrigins.length > 0 ? allowedOrigins : '*',
+    methods: ['GET', 'POST', 'PUT', 'DELETE'],
+    credentials: true
   }
 });
 
@@ -40,9 +65,9 @@ const io = new Server(server, {
 app.set('io', io);
 
 // Global Middlewares
-app.use(cors());
-app.use(express.json());
-app.use(express.urlencoded({ extended: true }));
+app.use(cors(corsOptions));
+app.use(express.json({ limit: '10mb' }));
+app.use(express.urlencoded({ extended: true, limit: '10mb' }));
 
 // Serve uploaded documents statically
 app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
@@ -53,12 +78,19 @@ app.use('/api/requests', requestRoutes);
 app.use('/api/admin', adminRoutes);
 app.use('/api/upload', uploadRoutes);
 
-// Base route checker
+// Base route health check — Render uses this to verify service is alive
 app.get('/', (req, res) => {
   res.status(200).json({
     success: true,
-    message: 'SUVIDHA Smart Helpdesk Backend API is online'
+    service: 'SUVIDHA Smart Helpdesk Backend API',
+    status: 'online',
+    env: process.env.NODE_ENV || 'development'
   });
+});
+
+// Health check endpoint (Render ping route)
+app.get('/health', (req, res) => {
+  res.status(200).json({ success: true, uptime: process.uptime(), timestamp: new Date().toISOString() });
 });
 
 // Catch-all 404 Route handler
@@ -69,7 +101,7 @@ app.use((req, res, next) => {
 // Global Error Handler Middleware
 app.use((err, req, res, next) => {
   console.error('[Global Error]:', err.stack);
-  res.status(500).json({
+  res.status(err.status || 500).json({
     success: false,
     message: err.message || 'Internal Server Error'
   });
@@ -82,7 +114,7 @@ io.on('connection', (socket) => {
   // Custom rooms for specific citizens to watch their request ID
   socket.on('joinRequestRoom', (requestId) => {
     socket.join(requestId);
-    console.log(`[Socket.io] Kiosk socket ${socket.id} joined status room: ${requestId}`);
+    console.log(`[Socket.io] Socket ${socket.id} joined room: ${requestId}`);
   });
 
   socket.on('disconnect', () => {
@@ -90,12 +122,13 @@ io.on('connection', (socket) => {
   });
 });
 
+// Read PORT from env — Render injects this automatically
 const PORT = process.env.PORT || 5000;
 
 server.listen(PORT, () => {
   console.log(`====================================================`);
-  console.log(` SUVIDHA Backend Server running on Port ${PORT}`);
+  console.log(` SUVIDHA Backend running on port ${PORT}`);
   console.log(` Mode: ${process.env.NODE_ENV || 'development'}`);
-  console.log(` API base: http://localhost:${PORT}/api`);
+  console.log(` Allowed Origins: ${allowedOrigins.length > 0 ? allowedOrigins.join(', ') : '* (all)'}`);
   console.log(`====================================================`);
 });

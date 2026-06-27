@@ -40,7 +40,7 @@ export const AccessibilityPanel = () => {
     <div className="relative z-50">
       <button
         onClick={() => setIsOpen(!isOpen)}
-        className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold border border-gray-200 bg-gray-50 hover:bg-orange-50 hover:border-orange-300 text-gray-700 hover:text-[#EA580C] transition-all"
+        className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold border border-gray-200 bg-gray-50 hover:bg-blue-50 hover:border-blue-300 text-gray-700 hover:text-[#1D4ED8] transition-all"
         aria-label="Accessibility options"
       >
         <Settings className="w-3.5 h-3.5" />
@@ -51,7 +51,7 @@ export const AccessibilityPanel = () => {
         <div className="absolute right-0 mt-2 w-72 bg-white border border-gray-200 rounded-xl shadow-xl p-4 z-50">
           <div className="flex items-center justify-between mb-3 pb-3 border-b border-gray-100">
             <h3 className="font-bold text-sm text-gray-900 flex items-center gap-1.5">
-              <Activity className="w-4 h-4 text-[#EA580C]" />
+              <Activity className="w-4 h-4 text-[#1D4ED8]" />
               Accessibility Tools
             </h3>
             <button

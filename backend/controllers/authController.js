@@ -4,10 +4,10 @@ import User from '../models/User.js';
 // Simple in-memory storage for active OTP codes
 const activeOtps = new Map();
 
-// Helper to sign JWT tokens
+// Helper to sign JWT tokens — 8-hour expiry aligns with a full working session
 const generateToken = (payload) => {
   return jwt.sign(payload, process.env.JWT_SECRET || 'suvidha_secret', {
-    expiresIn: '30d'
+    expiresIn: '8h'
   });
 };
 
@@ -55,9 +55,10 @@ export const verifyOtp = async (req, res) => {
 
     const savedOtp = activeOtps.get(mobile);
 
-    // Allow mock pass '123456' or the actual generated code
-    if (otp !== '123456' && otp !== savedOtp) {
-      return res.status(400).json({ success: false, message: 'Invalid OTP code. Try again or use 123456.' });
+    // Allow mock pass '123456' only in non-production environments (demo/dev)
+    const isDemoAllowed = process.env.NODE_ENV !== 'production';
+    if (otp !== savedOtp && !(isDemoAllowed && otp === '123456')) {
+      return res.status(400).json({ success: false, message: 'Invalid OTP code. Please retry.' });
     }
 
     // Remove OTP from cache after use

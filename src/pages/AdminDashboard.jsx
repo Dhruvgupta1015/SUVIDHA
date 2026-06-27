@@ -203,8 +203,8 @@ export const AdminDashboard = () => {
       {currentAdmin && (
         <div className="bg-white border border-gray-200 rounded-2xl p-5 flex flex-col sm:flex-row sm:items-center justify-between gap-4 shadow-sm">
           <div className="flex items-center gap-4">
-            <div className="w-12 h-12 rounded-xl bg-purple-555 bg-purple-50 border border-purple-100 flex items-center justify-center flex-shrink-0">
-              <ShieldAlert className="w-6 h-6 text-purple-600" />
+            <div className="w-12 h-12 rounded-xl bg-blue-50 border border-blue-100 flex items-center justify-center flex-shrink-0">
+              <ShieldAlert className="w-6 h-6 text-[#1D4ED8]" />
             </div>
             <div>
               <h2 className="text-base font-black text-gray-900" style={{ fontFamily: 'Outfit, sans-serif' }}>
@@ -534,12 +534,12 @@ export const AdminDashboard = () => {
                   <div className="space-y-1.5">
                     <div className="flex justify-between items-center text-xs font-semibold">
                       <span className="flex items-center gap-1.5 text-gray-600">
-                        <Cpu className="w-4 h-4 text-purple-600" /> Qualcomm Edge AI CPU
+                        <Cpu className="w-4 h-4 text-[#1D4ED8]" /> Qualcomm Edge AI CPU
                       </span>
                       <span className="font-bold text-gray-900">{cpuLoad}%</span>
                     </div>
                     <div className="w-full bg-gray-100 h-2 rounded-full overflow-hidden">
-                      <div className="bg-purple-650 h-full transition-all duration-300 bg-purple-600" style={{ width: `${cpuLoad}%` }} />
+                      <div className="bg-[#1D4ED8] h-full transition-all duration-300" style={{ width: `${cpuLoad}%` }} />
                     </div>
                   </div>
 

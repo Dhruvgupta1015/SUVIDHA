@@ -1,5 +1,5 @@
 import express from 'express';
-import { upload } from '../middleware/upload.js';
+import { upload, handleUploadError } from '../middleware/upload.js';
 import { protect } from '../middleware/auth.js';
 
 const router = express.Router();
@@ -29,6 +29,7 @@ router.post('/docs', protect, upload.single('file'), (req, res) => {
   } catch (error) {
     return res.status(500).json({ success: false, message: error.message });
   }
-});
+}, handleUploadError); // catches multer errors (size limit, bad MIME type)
 
 export default router;
+

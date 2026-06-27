@@ -36,8 +36,9 @@ export const Auth = () => {
       setLoginType('citizen');
     } else {
       setLoginType('staff');
+      // Pre-fill email for convenience but NEVER pre-fill passwords in production
       setEmail(roleParam === 'admin' ? 'admin@suvidha.gov.in' : 'officer.elec@suvidha.gov.in');
-      setPassword(roleParam === 'admin' ? 'admin123' : 'officer123');
+      setPassword(''); // Passwords must always be typed — no auto-fill
     }
     setErrorMsg('');
   }, [roleParam]);
@@ -51,7 +52,9 @@ export const Auth = () => {
       setLoading(false); setOtpSent(true);
       if (response.data?.demoOtp) { setDemoOtp(response.data.demoOtp); speak(`Your OTP is ${response.data.demoOtp}`); }
     } catch {
-      setLoading(false); setOtpSent(true); setDemoOtp('123456');
+      setLoading(false); setOtpSent(true);
+      // Only show hardcoded fallback OTP in development mode
+      if (import.meta.env.DEV) setDemoOtp('123456');
     }
   };
 
@@ -97,9 +100,9 @@ export const Auth = () => {
 
   const quickCredentials = [
     { label: 'Citizen User', sub: 'Mobile: 9876543210', key: 'citizen_user', icon: <UserIcon className="w-3.5 h-3.5 text-green-600" />, color: 'text-green-700' },
-    { label: 'Electricity Officer', sub: 'officer.elec@…', key: 'elec_officer', icon: <Building2 className="w-3.5 h-3.5 text-blue-600" />, color: 'text-blue-700' },
-    { label: 'Water Officer', sub: 'officer.water@…', key: 'water_officer', icon: <Building2 className="w-3.5 h-3.5 text-blue-600" />, color: 'text-blue-700' },
-    { label: 'Super Admin', sub: 'admin@suvidha…', key: 'admin', icon: <Shield className="w-3.5 h-3.5 text-purple-600" />, color: 'text-purple-700' },
+    { label: 'Electricity Officer', sub: 'officer.elec@…', key: 'elec_officer', icon: <Building2 className="w-3.5 h-3.5 text-[#1D4ED8]" />, color: 'text-blue-700' },
+    { label: 'Water Officer', sub: 'officer.water@…', key: 'water_officer', icon: <Building2 className="w-3.5 h-3.5 text-[#1D4ED8]" />, color: 'text-blue-700' },
+    { label: 'Super Admin', sub: 'admin@suvidha…', key: 'admin', icon: <Shield className="w-3.5 h-3.5 text-[#1D4ED8]" />, color: 'text-[#1D4ED8]' },
   ];
 
   return (
@@ -210,10 +213,11 @@ export const Auth = () => {
                     </form>
                   ) : (
                     <form onSubmit={handleVerifyOtp} className="space-y-4">
-                      {demoOtp && (
+                      {/* Demo OTP banner — development mode only */}
+                      {demoOtp && import.meta.env.DEV && (
                         <div className="p-3.5 bg-amber-50 border border-amber-200 rounded-xl text-amber-800 text-sm flex items-center gap-2">
                           <AlertTriangle className="w-4 h-4 flex-shrink-0" />
-                          <span>Demo OTP: <code className="font-mono font-black underline text-base">{demoOtp}</code> — use this to login</span>
+                          <span>Dev Mode OTP: <code className="font-mono font-black underline text-base">{demoOtp}</code></span>
                         </div>
                       )}
 

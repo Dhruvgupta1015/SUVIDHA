@@ -11,8 +11,21 @@ export const createRequest = async (req, res) => {
     const { serviceType, subService, description, documents, priority } = req.body;
     const citizenId = req.user.id; // from protect middleware
 
-    if (!serviceType || !subService || !description) {
-      return res.status(400).json({ success: false, message: 'Service type, sub-service, and description are required' });
+    // Input validation
+    const validServiceTypes = ['electricity', 'water', 'gas', 'waste', 'general'];
+    const validPriorities   = ['Standard', 'High', 'Critical'];
+
+    if (!serviceType || !validServiceTypes.includes(serviceType)) {
+      return res.status(400).json({ success: false, message: 'Invalid or missing serviceType. Must be one of: electricity, water, gas, waste, general.' });
+    }
+    if (!subService || typeof subService !== 'string' || subService.trim().length === 0) {
+      return res.status(400).json({ success: false, message: 'Sub-service category is required.' });
+    }
+    if (!description || typeof description !== 'string' || description.trim().length < 10) {
+      return res.status(400).json({ success: false, message: 'Description must be at least 10 characters.' });
+    }
+    if (priority && !validPriorities.includes(priority)) {
+      return res.status(400).json({ success: false, message: 'Invalid priority level. Must be: Standard, High, or Critical.' });
     }
 
     // Map serviceType to realistic department
@@ -168,9 +181,15 @@ export const updateRequestStatus = async (req, res) => {
       return res.status(403).json({ success: false, message: 'Not authorized to modify tickets outside your department' });
     }
 
+    // Validate status if provided
+    const validStatuses = ['Pending', 'In-Progress', 'Approved', 'Rejected', 'Completed'];
+    if (status && !validStatuses.includes(status)) {
+      return res.status(400).json({ success: false, message: 'Invalid status value.' });
+    }
+
     if (status) request.status = status;
-    if (assignedTeam) request.assignedTeam = assignedTeam;
-    if (remarks !== undefined) request.remarks = remarks;
+    if (assignedTeam && typeof assignedTeam === 'string') request.assignedTeam = assignedTeam.trim();
+    if (remarks !== undefined && typeof remarks === 'string') request.remarks = remarks.trim();
     if (assignedDepartment && staff.role === 'admin') {
       // Only admin can re-assign departments
       request.assignedDepartment = assignedDepartment;

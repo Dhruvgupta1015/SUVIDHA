@@ -3,17 +3,20 @@ import mongoose from 'mongoose';
 export const connectDB = async () => {
   try {
     const connStr = process.env.MONGO_URI || 'mongodb://localhost:27017/suvidha';
-    console.log(`Connecting to MongoDB at: ${connStr}`);
-    
+
     const conn = await mongoose.connect(connStr, {
-      serverSelectionTimeoutMS: 5000 // fail fast if db is offline
+      serverSelectionTimeoutMS: 10000,  // 10s — handles Atlas cold-start latency
+      socketTimeoutMS: 45000,           // 45s socket timeout
+      maxPoolSize: 10,                  // max concurrent connections
+      family: 4                         // force IPv4 — avoids Render IPv6 DNS issues
     });
-    
-    console.log(`MongoDB Connected: ${conn.connection.host}`);
+
+    console.log(`[DB] MongoDB Connected: ${conn.connection.host}`);
   } catch (error) {
-    console.error(`MongoDB connection error: ${error.message}`);
-    process.exit(1);
+    console.error(`[DB] MongoDB connection error: ${error.message}`);
+    process.exit(1); // crash fast — Render will restart the service
   }
 };
 
 export default connectDB;
+

@@ -1,0 +1,4 @@
+# This file keeps the uploads directory tracked by git.
+# Actual uploaded files are excluded via .gitignore.
+# The backend creates this directory automatically if missing (see middleware/upload.js),
+# but having it pre-committed prevents permission errors on first deploy.

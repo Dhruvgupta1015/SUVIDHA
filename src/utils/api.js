@@ -112,7 +112,11 @@ const resolveMockFallback = (config) => {
   if (url.includes('/auth/login')) {
     return {
       status: 200,
-      data: { success: true, demoOtp: "123456" }
+      data: {
+        success: true,
+        // Only expose demo OTP in development — never in production builds
+        ...(import.meta.env.DEV && { demoOtp: "123456" })
+      }
     };
   }
   
@@ -288,6 +292,17 @@ API.interceptors.response.use(
   (response) => response,
   async (error) => {
     const { config } = error;
+
+    // ── 401 Unauthorized: real server rejected the token → force logout ──
+    if (error.response && error.response.status === 401) {
+      localStorage.removeItem('token');
+      localStorage.removeItem('user');
+      // Avoid redirect loops on the auth page itself
+      if (!window.location.pathname.startsWith('/auth')) {
+        window.location.href = '/auth';
+      }
+      return Promise.reject(error);
+    }
 
     // Detect network/connection failures
     const isNetworkError = error.code === 'ERR_NETWORK' || !error.response;
