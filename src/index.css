@@ -1,30 +1,52 @@
 @import "tailwindcss";
-@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Outfit:wght@300;400;500;600;700;800&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=Outfit:wght@400;500;600;700;800;900&display=swap');
 @config "../tailwind.config.js";
 
+/* ============================================================
+   SUVIDHA Design Tokens — Government Blue + White Theme
+   Primary: #1D4ED8  |  White: #FFFFFF  |  Gray: #F3F4F6
+   Green:  #16A34A   |  Dark:  #111827
+   ============================================================ */
 :root {
-  --color-kiosk-teal: #EA580C;
-  --color-kiosk-mint: #16a34a;
-  --color-kiosk-crimson: #dc2626;
-  --color-glass-bg: #ffffff;
-  --color-glass-border: #d1d5db;
+  --color-primary:       #1D4ED8;
+  --color-primary-dark:  #1E3A8A;
+  --color-primary-light: #DBEAFE;
+  --color-green:         #16A34A;
+  --color-green-light:   #DCFCE7;
+  --color-red:           #DC2626;
+  --color-red-light:     #FEE2E2;
+  --color-amber:         #D97706;
+  --color-amber-light:   #FEF3C7;
+  --color-bg:            #F3F4F6;
+  --color-surface:       #FFFFFF;
+  --color-border:        #E5E7EB;
+  --color-border-dark:   #D1D5DB;
+  --color-text:          #111827;
+  --color-text-muted:    #6B7280;
+  --color-text-subtle:   #9CA3AF;
 }
 
-/* Force light appearance on all class modes */
+/* ── Force light mode always ── */
 .light, .dark {
-  --color-kiosk-teal: #EA580C;
-  --color-glass-bg: #ffffff;
-  --color-glass-border: #d1d5db;
+  --color-primary:      #1D4ED8;
+  --color-bg:           #F3F4F6;
+  --color-surface:      #FFFFFF;
 }
 
+/* ============================================================
+   Base Styles
+   ============================================================ */
 @layer base {
   body {
-    background-color: #ffffff !important;
-    color: #111827 !important;
+    background-color: var(--color-bg) !important;
+    color: var(--color-text) !important;
     font-family: 'Inter', system-ui, -apple-system, sans-serif;
     -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
     overflow-x: hidden;
     min-height: 100vh;
+    font-size: 15px;
+    line-height: 1.6;
   }
 
   #root {
@@ -32,80 +54,250 @@
     display: flex;
     flex-direction: column;
     width: 100%;
-    background-color: #f8fafc;
+    background-color: var(--color-bg);
   }
 
   h1, h2, h3, h4, h5, h6 {
-    color: #111827;
+    color: var(--color-text);
+    font-family: 'Outfit', 'Inter', system-ui, sans-serif;
+    font-weight: 700;
+    line-height: 1.25;
+    letter-spacing: -0.01em;
   }
 
   *:focus-visible {
-    outline: 3px solid #EA580C;
+    outline: 3px solid var(--color-primary);
     outline-offset: 2px;
+    border-radius: 4px;
+  }
+
+  a {
+    color: inherit;
+    text-decoration: none;
+  }
+
+  *, *::before, *::after {
+    box-sizing: border-box;
   }
 }
 
+/* ============================================================
+   Scrollbars
+   ============================================================ */
+::-webkit-scrollbar { width: 6px; height: 6px; }
+::-webkit-scrollbar-track { background: #F1F5F9; }
+::-webkit-scrollbar-thumb { background: #CBD5E1; border-radius: 9999px; }
+::-webkit-scrollbar-thumb:hover { background: #94A3B8; }
+
+/* ============================================================
+   Utility Classes
+   ============================================================ */
 @layer utilities {
-  .glassmorphism, .glassmorphism-dark {
-    background: #ffffff;
-    border: 1px solid #d1d5db;
+
+  /* Government card — white surface with subtle shadow */
+  .gov-card {
+    background: var(--color-surface);
+    border: 1px solid var(--color-border);
+    border-radius: 12px;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.06), 0 1px 2px rgba(0,0,0,0.04);
+    transition: box-shadow 0.2s ease, border-color 0.2s ease;
+  }
+  .gov-card:hover {
+    box-shadow: 0 4px 12px rgba(0,0,0,0.08);
+    border-color: var(--color-border-dark);
   }
 
+  /* Primary button — Blue */
+  .btn-primary {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.5rem;
+    padding: 0.625rem 1.25rem;
+    background: var(--color-primary);
+    color: #FFFFFF;
+    font-weight: 700;
+    font-size: 0.875rem;
+    border-radius: 8px;
+    border: none;
+    cursor: pointer;
+    transition: background 0.15s ease, transform 0.1s ease, box-shadow 0.15s ease;
+    box-shadow: 0 1px 3px rgba(29,78,216,0.3);
+    user-select: none;
+  }
+  .btn-primary:hover {
+    background: var(--color-primary-dark);
+    box-shadow: 0 4px 12px rgba(29,78,216,0.35);
+  }
+  .btn-primary:active { transform: scale(0.98); }
+  .btn-primary:disabled { opacity: 0.55; cursor: not-allowed; }
+
+  /* Outline button — Blue border */
+  .btn-outline {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.5rem;
+    padding: 0.625rem 1.25rem;
+    background: transparent;
+    color: var(--color-primary);
+    font-weight: 700;
+    font-size: 0.875rem;
+    border-radius: 8px;
+    border: 2px solid var(--color-primary);
+    cursor: pointer;
+    transition: background 0.15s ease, color 0.15s ease;
+    user-select: none;
+  }
+  .btn-outline:hover {
+    background: var(--color-primary-light);
+  }
+  .btn-outline:active { transform: scale(0.98); }
+
+  /* Ghost button */
+  .btn-ghost {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.5rem;
+    padding: 0.5rem 1rem;
+    background: transparent;
+    color: var(--color-text-muted);
+    font-weight: 600;
+    font-size: 0.875rem;
+    border-radius: 8px;
+    border: 1px solid var(--color-border);
+    cursor: pointer;
+    transition: background 0.15s ease, color 0.15s ease;
+    user-select: none;
+  }
+  .btn-ghost:hover {
+    background: var(--color-bg);
+    color: var(--color-text);
+  }
+
+  /* Status badge helpers */
+  .badge-pending   { background: #FEF3C7; color: #92400E; border: 1px solid #FDE68A; }
+  .badge-progress  { background: #DBEAFE; color: #1E3A8A; border: 1px solid #BFDBFE; }
+  .badge-complete  { background: #DCFCE7; color: #14532D; border: 1px solid #BBF7D0; }
+  .badge-rejected  { background: #FEE2E2; color: #7F1D1D; border: 1px solid #FECACA; }
+  .badge-approved  { background: #DCFCE7; color: #14532D; border: 1px solid #BBF7D0; }
+  .badge-critical  { background: #FEE2E2; color: #7F1D1D; border: 1px solid #FECACA; }
+  .badge-high      { background: #FEF3C7; color: #92400E; border: 1px solid #FDE68A; }
+  .badge-standard  { background: #F3F4F6; color: #374151; border: 1px solid #E5E7EB; }
+
+  .status-badge {
+    display: inline-flex;
+    align-items: center;
+    padding: 0.2rem 0.625rem;
+    border-radius: 9999px;
+    font-size: 0.7rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+  }
+
+  /* Input field */
+  .gov-input {
+    width: 100%;
+    padding: 0.625rem 0.875rem;
+    background: #F9FAFB;
+    border: 1.5px solid var(--color-border-dark);
+    border-radius: 8px;
+    font-size: 0.875rem;
+    font-weight: 500;
+    color: var(--color-text);
+    font-family: 'Inter', sans-serif;
+    transition: border-color 0.15s ease, box-shadow 0.15s ease;
+    outline: none;
+  }
+  .gov-input:focus {
+    border-color: var(--color-primary);
+    box-shadow: 0 0 0 3px rgba(29,78,216,0.15);
+    background: #FFFFFF;
+  }
+  .gov-input::placeholder { color: var(--color-text-subtle); font-weight: 400; }
+
+  /* Section label */
+  .section-label {
+    font-size: 0.7rem;
+    font-weight: 800;
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+    color: var(--color-text-muted);
+  }
+
+  /* Glassmorphism (kept for compatibility, now white-based) */
+  .glassmorphism, .glassmorphism-dark {
+    background: var(--color-surface);
+    border: 1px solid var(--color-border);
+  }
+
+  /* Kiosk button (compat) */
   .kiosk-btn {
     @apply active:scale-95 transition-all duration-150 select-none cursor-pointer;
   }
 
-  .text-glow-teal {
-    text-shadow: none;
-  }
-
-  .glow-border {
-    box-shadow: none;
-    border-color: #d1d5db;
-  }
-
+  /* Animations */
   .animate-fade-in {
-    animation: fadeIn 0.4s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+    animation: fadeIn 0.45s cubic-bezier(0.16, 1, 0.3, 1) forwards;
   }
-
+  .animate-fade-up {
+    animation: fadeUp 0.5s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+  }
+  .animate-slide-in {
+    animation: slideIn 0.35s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+  }
   .animate-spin-slow {
     animation: spinSlow 8s linear infinite;
   }
-
   .animate-bounce-slow {
     animation: bounceSlow 3s ease-in-out infinite;
   }
-
-  .animate-dash {
-    stroke-dashoffset: -40;
-    animation: dashPulse 1.8s linear infinite;
+  .animate-pulse-dot {
+    animation: pulseDot 2s ease-in-out infinite;
+  }
+  .animate-count-up {
+    animation: fadeIn 0.6s ease forwards;
   }
 
-  .voice-active-pulse {
-    animation: voice-pulse 2s infinite ease-in-out;
+  /* Page transitions */
+  .page-enter {
+    animation: fadeUp 0.4s cubic-bezier(0.16, 1, 0.3, 1) forwards;
   }
 }
 
-/* Scrollbars */
-::-webkit-scrollbar { width: 6px; height: 6px; }
-::-webkit-scrollbar-track { background: #f1f5f9; }
-::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 9999px; }
-::-webkit-scrollbar-thumb:hover { background: #94a3b8; }
-
-/* Keyframes */
+/* ============================================================
+   Keyframes
+   ============================================================ */
 @keyframes fadeIn {
-  from { opacity: 0; transform: translateY(10px); }
-  to { opacity: 1; transform: translateY(0); }
+  from { opacity: 0; }
+  to   { opacity: 1; }
+}
+
+@keyframes fadeUp {
+  from { opacity: 0; transform: translateY(16px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes slideIn {
+  from { opacity: 0; transform: translateX(-12px); }
+  to   { opacity: 1; transform: translateX(0); }
 }
 
 @keyframes spinSlow {
   from { transform: rotate(0deg); }
-  to { transform: rotate(360deg); }
+  to   { transform: rotate(360deg); }
 }
 
 @keyframes bounceSlow {
   0%, 100% { transform: translateY(0); }
-  50% { transform: translateY(-6px); }
+  50%       { transform: translateY(-6px); }
+}
+
+@keyframes pulseDot {
+  0%, 100% { opacity: 0.4; transform: scale(1); }
+  50%       { opacity: 1; transform: scale(1.15); }
 }
 
 @keyframes dashPulse {
@@ -114,45 +306,122 @@
 
 @keyframes voice-pulse {
   0%, 100% { transform: scale(1); opacity: 0.5; }
-  50% { transform: scale(1.06); opacity: 0.85; }
+  50%       { transform: scale(1.06); opacity: 0.85; }
 }
 
-/* Font size scaling */
-html.text-scale-normal { font-size: 16px; }
-html.text-scale-large { font-size: 18px; }
-html.text-scale-extra { font-size: 20px; }
+@keyframes countUp {
+  from { opacity: 0; transform: translateY(8px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
 
-/* High contrast overrides */
+/* ============================================================
+   Font size scaling (Accessibility)
+   ============================================================ */
+html.text-scale-normal { font-size: 15px; }
+html.text-scale-large  { font-size: 17px; }
+html.text-scale-extra  { font-size: 19px; }
+
+/* ============================================================
+   High contrast mode (Accessibility)
+   ============================================================ */
 html.high-contrast {
   background-color: #000000 !important;
-  color: #ffff00 !important;
+  color: #FFFF00 !important;
 }
-
 html.high-contrast * {
-  border-color: #ffff00 !important;
-  color: #ffff00 !important;
+  border-color: #FFFF00 !important;
+  color: #FFFF00 !important;
   background-color: #000000 !important;
   box-shadow: none !important;
   text-shadow: none !important;
   background-image: none !important;
 }
-
 html.high-contrast button,
 html.high-contrast a,
 html.high-contrast select,
 html.high-contrast input,
 html.high-contrast textarea {
-  border: 2px solid #ffff00 !important;
+  border: 2px solid #FFFF00 !important;
 }
-
 html.high-contrast button:hover,
 html.high-contrast a:hover {
-  background-color: #ffff00 !important;
+  background-color: #FFFF00 !important;
   color: #000000 !important;
 }
-
 html.high-contrast button:hover *,
 html.high-contrast a:hover * {
   color: #000000 !important;
-  background-color: #ffff00 !important;
+  background-color: #FFFF00 !important;
+}
+
+/* ============================================================
+   Stat counter animation (for Landing page live stats)
+   ============================================================ */
+.stat-number {
+  font-family: 'Outfit', sans-serif;
+  font-weight: 800;
+  font-variant-numeric: tabular-nums;
+  animation: countUp 0.8s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+/* ============================================================
+   Hero gradient overlay
+   ============================================================ */
+.hero-gradient {
+  background: linear-gradient(135deg, #1E3A8A 0%, #1D4ED8 50%, #2563EB 100%);
+}
+
+/* ============================================================
+   FAQ accordion transition
+   ============================================================ */
+.faq-answer {
+  transition: max-height 0.3s ease, opacity 0.3s ease;
+  overflow: hidden;
+}
+
+/* ============================================================
+   Notification dot
+   ============================================================ */
+.notif-dot {
+  position: absolute;
+  top: -2px;
+  right: -2px;
+  width: 8px;
+  height: 8px;
+  background: #EF4444;
+  border-radius: 50%;
+  border: 2px solid white;
+  animation: pulseDot 2s ease-in-out infinite;
+}
+
+/* ============================================================
+   Table row hover
+   ============================================================ */
+.gov-table tr:hover td {
+  background: #EFF6FF;
+}
+
+/* ============================================================
+   Sidebar nav items
+   ============================================================ */
+.sidebar-link {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 0.625rem 0.875rem;
+  border-radius: 8px;
+  font-size: 0.875rem;
+  font-weight: 600;
+  color: var(--color-text-muted);
+  transition: background 0.15s ease, color 0.15s ease;
+  cursor: pointer;
+}
+.sidebar-link:hover {
+  background: var(--color-primary-light);
+  color: var(--color-primary);
+}
+.sidebar-link.active {
+  background: var(--color-primary-light);
+  color: var(--color-primary);
+  font-weight: 700;
 }

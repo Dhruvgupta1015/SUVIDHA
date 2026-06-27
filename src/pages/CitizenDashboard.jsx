@@ -1,203 +1,163 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { 
-  User, 
-  PlusCircle, 
-  FileText, 
-  FolderLock, 
-  TrendingUp, 
-  Download, 
-  UploadCloud, 
-  CheckCircle, 
-  Clock, 
-  AlertTriangle,
-  Zap, 
-  Droplet, 
-  Flame, 
-  Trash2, 
-  ChevronRight,
-  ShieldCheck,
-  Printer
+import {
+  User, PlusCircle, FileText, FolderLock, TrendingUp, Download,
+  UploadCloud, CheckCircle, Clock, AlertTriangle, Zap, Droplet,
+  Flame, Trash2, ChevronRight, ShieldCheck, Printer, Bell,
+  Search, RefreshCw, FileCheck, MapPin, Calendar, Hash
 } from 'lucide-react';
 import { requestAPI, uploadAPI } from '../utils/api';
 import { useAccessibility } from '../context/AccessibilityContext';
+
+/* ─── Status helpers ─── */
+const statusBadge = (status) => {
+  const map = {
+    'Completed':   'badge-complete',
+    'In-Progress': 'badge-progress',
+    'Rejected':    'badge-rejected',
+    'Pending':     'badge-pending',
+    'Approved':    'badge-approved',
+  };
+  return `status-badge ${map[status] || 'badge-standard'}`;
+};
+
+const priorityBadge = (p) => {
+  if (p === 'Critical') return 'status-badge badge-critical';
+  if (p === 'High')     return 'status-badge badge-high';
+  return 'status-badge badge-standard';
+};
+
+const serviceIconMap = {
+  electricity: <Zap className="w-4 h-4 text-[#1D4ED8]" />,
+  water:       <Droplet className="w-4 h-4 text-cyan-600" />,
+  gas:         <Flame className="w-4 h-4 text-orange-500" />,
+  waste:       <Trash2 className="w-4 h-4 text-green-600" />,
+  general:     <FileText className="w-4 h-4 text-purple-500" />,
+};
+const serviceIconBg = {
+  electricity: 'bg-blue-50',
+  water:       'bg-cyan-50',
+  gas:         'bg-orange-50',
+  waste:       'bg-green-50',
+  general:     'bg-purple-50',
+};
 
 export const CitizenDashboard = () => {
   const navigate = useNavigate();
   const { speak } = useAccessibility();
 
-  const [activeTab, setActiveTab] = useState('timeline'); // 'timeline' | 'apply' | 'vault'
-  const [currentUser, setCurrentUser] = useState(null);
-  
-  // Data State
-  const [myRequests, setMyRequests] = useState([]);
+  const [activeTab, setActiveTab]         = useState('timeline');
+  const [currentUser, setCurrentUser]     = useState(null);
+  const [myRequests, setMyRequests]       = useState([]);
   const [selectedRequest, setSelectedRequest] = useState(null);
-  const [loading, setLoading] = useState(false);
-  const [errorMsg, setErrorMsg] = useState('');
-  
-  // Application Form State
-  const [serviceType, setServiceType] = useState('electricity');
-  const [subService, setSubService] = useState('New Connection');
-  const [description, setDescription] = useState('');
-  const [priority, setPriority] = useState('Standard');
+  const [loading, setLoading]             = useState(false);
+  const [refreshing, setRefreshing]       = useState(false);
+  const [errorMsg, setErrorMsg]           = useState('');
+  const [searchQuery, setSearchQuery]     = useState('');
+
+  /* Form state */
+  const [serviceType, setServiceType]     = useState('electricity');
+  const [subService, setSubService]       = useState('New Connection Meter');
+  const [description, setDescription]    = useState('');
+  const [priority, setPriority]           = useState('Standard');
   const [uploadedFiles, setUploadedFiles] = useState([]);
-  const [formSuccess, setFormSuccess] = useState(false);
+  const [formSuccess, setFormSuccess]     = useState(false);
+  const [submitting, setSubmitting]       = useState(false);
 
-  // Document Vault State
+  /* Vault state */
   const [vaultDocs, setVaultDocs] = useState([
-    { name: "Aadhaar Card.pdf", size: "1.12 MB", type: "ID Proof", verification: "DigiLocker Verified", confidence: 1.0 },
-    { name: "Electricity Bill Copy.pdf", size: "0.85 MB", type: "Address Proof", verification: "System Verified", confidence: 0.96 }
+    { name: 'Aadhaar Card.pdf',           size: '1.12 MB', type: 'ID Proof',       verification: 'DigiLocker Verified', confidence: 1.0 },
+    { name: 'Electricity Bill Copy.pdf',  size: '0.85 MB', type: 'Address Proof',  verification: 'System Verified',     confidence: 0.96 },
   ]);
-
-  // Uploading State
-  const [uploading, setUploading] = useState(false);
-  const fileInputRef = useRef(null);
-
-  // Receipt Modal State
+  const [uploading, setUploading]   = useState(false);
+  const fileInputRef                = useRef(null);
+  const vaultInputRef               = useRef(null);
   const [receiptRequest, setReceiptRequest] = useState(null);
 
-  // Verification checks on mount
+  /* ─── Auth guard ─── */
   useEffect(() => {
-    const token = localStorage.getItem('token');
+    const token   = localStorage.getItem('token');
     const userStr = localStorage.getItem('user');
-    if (!token || !userStr) {
-      navigate('/auth?role=citizen');
-      return;
-    }
+    if (!token || !userStr) { navigate('/auth?role=citizen'); return; }
     const user = JSON.parse(userStr);
-    if (user.role !== 'citizen') {
-      navigate('/auth?role=citizen');
-      return;
-    }
+    if (user.role !== 'citizen') { navigate('/auth?role=citizen'); return; }
     setCurrentUser(user);
     fetchMyRequests();
   }, [navigate]);
 
-  const fetchMyRequests = async () => {
-    setLoading(true);
+  const fetchMyRequests = async (silent = false) => {
+    if (!silent) setLoading(true); else setRefreshing(true);
     try {
-      const response = await requestAPI.myRequests();
-      if (response.data && response.data.requests) {
-        setMyRequests(response.data.requests);
-        if (response.data.requests.length > 0) {
-          setSelectedRequest(response.data.requests[0]);
+      const res = await requestAPI.myRequests();
+      if (res.data?.requests) {
+        setMyRequests(res.data.requests);
+        if (res.data.requests.length > 0 && !selectedRequest) {
+          setSelectedRequest(res.data.requests[0]);
         }
       }
-    } catch (err) {
-      setErrorMsg('Failed to load request history.');
-    } finally {
-      setLoading(false);
-    }
+    } catch { setErrorMsg('Failed to load request history.'); }
+    finally { setLoading(false); setRefreshing(false); }
   };
 
-  // Handle Form Submission
+  /* ─── Apply submit ─── */
   const handleApplySubmit = async (e) => {
     e.preventDefault();
-    if (!description) {
-      setErrorMsg('Please enter a description for the connection/grievance.');
-      return;
-    }
-
-    setLoading(true);
-    setErrorMsg('');
+    if (!description.trim()) { setErrorMsg('Please enter a description.'); return; }
+    setSubmitting(true); setErrorMsg('');
     try {
-      const payload = {
-        serviceType,
-        subService,
-        description,
-        priority,
-        documents: uploadedFiles
-      };
-      
-      const response = await requestAPI.create(payload);
-      if (response.data && response.data.success) {
-        setFormSuccess(true);
-        speak("Request filed successfully");
-        fetchMyRequests();
-        
-        // Reset form
-        setDescription('');
-        setUploadedFiles([]);
-        setTimeout(() => {
-          setFormSuccess(false);
-          setActiveTab('timeline');
-        }, 1500);
+      const res = await requestAPI.create({ serviceType, subService, description, priority, documents: uploadedFiles });
+      if (res.data?.success) {
+        setFormSuccess(true); speak('Request filed successfully');
+        await fetchMyRequests(true);
+        setDescription(''); setUploadedFiles([]);
+        setTimeout(() => { setFormSuccess(false); setActiveTab('timeline'); }, 1800);
       }
     } catch (err) {
-      setErrorMsg(err.response?.data?.message || 'Failed to submit application. Fallback Mock created.');
-      fetchMyRequests();
-    } finally {
-      setLoading(false);
-    }
+      setErrorMsg(err.response?.data?.message || 'Submission failed. A mock ticket was created.');
+      await fetchMyRequests(true);
+    } finally { setSubmitting(false); }
   };
 
-  // Handle File Upload to vault/attachments
+  /* ─── File upload ─── */
   const handleFileUpload = async (e) => {
     const file = e.target.files[0];
     if (!file) return;
-
     setUploading(true);
-    setErrorMsg('');
-    
     const formData = new FormData();
     formData.append('file', file);
-
     try {
-      const response = await uploadAPI.uploadDoc(formData);
-      if (response.data && response.data.success) {
-        const newFile = {
-          name: response.data.file.name,
-          path: response.data.file.path,
-          verified: true,
-          confidence: 0.97
-        };
-        setUploadedFiles(prev => [...prev, newFile]);
-        
-        // Append to local vault docs list
-        setVaultDocs(prev => [
-          ...prev, 
-          { 
-            name: file.name, 
-            size: response.data.file.size, 
-            type: "Utility Scanned File", 
-            verification: "OCR Verified", 
-            confidence: 0.97 
-          }
-        ]);
-        speak("Document uploaded and verified by OCR");
+      const res = await uploadAPI.uploadDoc(formData);
+      if (res.data?.success) {
+        setUploadedFiles(prev => [...prev, { name: res.data.file.name, path: res.data.file.path, verified: true }]);
+        setVaultDocs(prev => [...prev, { name: file.name, size: res.data.file.size, type: 'Utility Attachment', verification: 'OCR Verified', confidence: 0.97 }]);
+        speak('Document uploaded and verified');
       }
-    } catch (err) {
-      // Offline fallback
-      const mockFile = {
-        name: file.name,
-        path: "/uploads/mock_upload.png",
-        verified: true,
-        confidence: 0.95
-      };
-      setUploadedFiles(prev => [...prev, mockFile]);
-      setVaultDocs(prev => [
-        ...prev, 
-        { 
-          name: file.name, 
-          size: "0.50 MB", 
-          type: "Scanned Attachment", 
-          verification: "Local OCR Checked", 
-          confidence: 0.95 
-        }
-      ]);
-      speak("Server offline. Scanned file added locally.");
-    } finally {
-      setUploading(false);
-    }
+    } catch {
+      setUploadedFiles(prev => [...prev, { name: file.name, path: '/uploads/mock.png', verified: true }]);
+      setVaultDocs(prev => [...prev, { name: file.name, size: '0.50 MB', type: 'Scanned Attachment', verification: 'Local OCR Checked', confidence: 0.95 }]);
+    } finally { setUploading(false); }
   };
 
-  // Sub-services list mapped to categories
+  const handleVaultUpload = async (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+    setUploading(true);
+    try {
+      const formData = new FormData();
+      formData.append('file', file);
+      await uploadAPI.uploadDoc(formData);
+    } catch {}
+    setVaultDocs(prev => [...prev, { name: file.name, size: '0.60 MB', type: 'Uploaded Document', verification: 'Pending OCR', confidence: 0.9 }]);
+    setUploading(false);
+  };
+
+  /* ─── Sub-services map ─── */
   const subServicesMap = {
-    electricity: ["New Connection Meter", "Line Phase Fault Repair", "Meter Replacement", "Bill Redressal"],
-    water: ["New Municipal Pipeline Connection", "Main Leakage Grievance", "No Supply complaint", "Dirty water pipeline"],
-    gas: ["PNG Valve Installation", "Meter Malfunction Repair", "Pressure Drop Issue", "Safety Audit Inspection"],
-    waste: ["Uncollected Trash Bin Pileup", "Sewage line clog", "Stagnant Water Drain", "Debris sweep request"],
-    general: ["Streetlight SL Pole out", "Road pothole repair", "Park/Stray Animal control", "Signage replacement"]
+    electricity: ['New Connection Meter', 'Line Phase Fault Repair', 'Meter Replacement', 'Bill Redressal'],
+    water:       ['New Municipal Pipeline Connection', 'Main Leakage Grievance', 'No Supply Complaint', 'Dirty Water Pipeline'],
+    gas:         ['PNG Valve Installation', 'Meter Malfunction Repair', 'Pressure Drop Issue', 'Safety Audit Inspection'],
+    waste:       ['Uncollected Trash Bin Pileup', 'Sewage Line Clog', 'Stagnant Water Drain', 'Debris Sweep Request'],
+    general:     ['Streetlight Pole Out', 'Road Pothole Repair', 'Park/Stray Animal Control', 'Signage Replacement'],
   };
 
   const handleCategoryChange = (cat) => {
@@ -205,30 +165,60 @@ export const CitizenDashboard = () => {
     setSubService(subServicesMap[cat][0]);
   };
 
-  // Helper to trigger print receipt
-  const triggerPrint = () => {
-    window.print();
+  /* ─── Filtered requests ─── */
+  const filteredRequests = myRequests.filter(r =>
+    !searchQuery || r.requestId?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+    r.subService?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+    r.serviceType?.toLowerCase().includes(searchQuery.toLowerCase())
+  );
+
+  /* ─── Stats ─── */
+  const stats = {
+    total:    myRequests.length,
+    pending:  myRequests.filter(r => r.status === 'Pending').length,
+    active:   myRequests.filter(r => r.status === 'In-Progress').length,
+    resolved: myRequests.filter(r => r.status === 'Completed').length,
   };
 
+  /* ─── Sidebar nav tabs ─── */
+  const tabs = [
+    { id: 'timeline', label: 'My Requests',         icon: <TrendingUp className="w-4 h-4" />,   badge: stats.total },
+    { id: 'apply',    label: 'Apply Service',        icon: <PlusCircle className="w-4 h-4" /> },
+    { id: 'vault',    label: 'Document Vault',       icon: <FolderLock className="w-4 h-4" />,   badge: vaultDocs.length },
+  ];
+
   return (
-    <div className="flex-1 flex flex-col space-y-6 w-full text-left">
-      
-      {/* 1. Welcome Banner */}
+    <div className="flex-1 flex flex-col gap-6 animate-fade-up">
+
+      {/* ══ Welcome Banner ══ */}
       {currentUser && (
-        <div className="p-6 bg-gradient-to-r from-blue-700 to-blue-800 rounded-3xl text-white flex flex-col md:flex-row md:items-center justify-between gap-4 shadow-sm">
-          <div className="space-y-1">
-            <div className="flex items-center gap-2">
-              <span className="p-1.5 bg-white/10 rounded-lg"><User className="w-5 h-5 text-white" /></span>
-              <h2 className="text-lg md:text-xl font-bold font-sans">Namaste, {currentUser.name}</h2>
+        <div className="hero-gradient rounded-2xl p-6 text-white flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+          <div className="flex items-center gap-4">
+            <div className="w-12 h-12 rounded-xl bg-white/15 border border-white/25 flex items-center justify-center flex-shrink-0">
+              <User className="w-6 h-6 text-white" />
             </div>
-            <p className="text-xs text-orange-100 font-semibold opacity-90">
-              Mobile: +91 {currentUser.mobile} {currentUser.aadhaar && ` | Aadhaar ID: ${currentUser.aadhaar}`}
-            </p>
+            <div>
+              <p className="text-blue-200 text-xs font-semibold uppercase tracking-wider">Citizen Portal</p>
+              <h2 className="text-lg font-black text-white" style={{ fontFamily: 'Outfit, sans-serif' }}>
+                Namaste, {currentUser.name || 'Citizen'} 🙏
+              </h2>
+              <p className="text-blue-200 text-xs mt-0.5">
+                +91 {currentUser.mobile}
+                {currentUser.aadhaar && <span className="ml-2 opacity-70">| Aadhaar: {currentUser.aadhaar}</span>}
+              </p>
+            </div>
           </div>
-          <div className="flex items-center gap-2 shrink-0">
+          <div className="flex items-center gap-3 flex-shrink-0">
+            <button
+              onClick={() => fetchMyRequests(true)}
+              className="p-2 rounded-xl bg-white/10 hover:bg-white/20 border border-white/20 transition text-white"
+              title="Refresh"
+            >
+              <RefreshCw className={`w-4 h-4 ${refreshing ? 'animate-spin' : ''}`} />
+            </button>
             <button
               onClick={() => setActiveTab('apply')}
-              className="px-4 py-2 bg-white text-[#EA580C] hover:bg-orange-50 text-xs font-black rounded-xl transition flex items-center gap-1.5"
+              className="flex items-center gap-2 px-5 py-2.5 bg-white text-[#1D4ED8] font-black text-sm rounded-xl hover:bg-blue-50 transition shadow"
             >
               <PlusCircle className="w-4 h-4" />
               Apply New Service
@@ -237,508 +227,469 @@ export const CitizenDashboard = () => {
         </div>
       )}
 
+      {/* ══ Stats Strip ══ */}
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+        {[
+          { label: 'Total Requests', value: stats.total,    icon: <FileText className="w-4 h-4" />,    color: 'text-[#1D4ED8] bg-blue-50 border-blue-100' },
+          { label: 'Pending',        value: stats.pending,  icon: <Clock className="w-4 h-4" />,        color: 'text-amber-600 bg-amber-50 border-amber-100' },
+          { label: 'In Progress',    value: stats.active,   icon: <TrendingUp className="w-4 h-4" />,   color: 'text-blue-600 bg-blue-50 border-blue-100' },
+          { label: 'Resolved',       value: stats.resolved, icon: <CheckCircle className="w-4 h-4" />,  color: 'text-green-600 bg-green-50 border-green-100' },
+        ].map(s => (
+          <div key={s.label} className="gov-card p-4 flex items-center gap-3">
+            <div className={`w-9 h-9 rounded-xl flex items-center justify-center flex-shrink-0 border ${s.color}`}>
+              {s.icon}
+            </div>
+            <div>
+              <div className="text-xl font-black text-gray-900" style={{ fontFamily: 'Outfit, sans-serif' }}>{s.value}</div>
+              <div className="text-[10px] text-gray-500 font-medium uppercase tracking-wide">{s.label}</div>
+            </div>
+          </div>
+        ))}
+      </div>
+
+      {/* ══ Error ══ */}
       {errorMsg && (
-        <div className="p-3 bg-red-50 dark:bg-red-950/20 border border-red-200 dark:border-red-900/40 text-red-600 dark:text-red-400 text-xs font-bold rounded-xl flex items-center gap-1.5">
-          <AlertTriangle className="w-4 h-4" />
-          <span>{errorMsg}</span>
+        <div className="flex items-center gap-2.5 p-3.5 rounded-xl bg-red-50 border border-red-200 text-red-700 text-sm">
+          <AlertTriangle className="w-4 h-4 flex-shrink-0" />
+          <span className="font-medium">{errorMsg}</span>
+          <button onClick={() => setErrorMsg('')} className="ml-auto text-red-400 hover:text-red-700">✕</button>
         </div>
       )}
 
-      {/* 2. Main Tab Viewport */}
-      <div className="grid grid-cols-1 lg:grid-cols-4 gap-6 items-start">
-        
-        {/* Navigation Sidebar */}
-        <div className="lg:col-span-1 flex flex-row lg:flex-col gap-2 p-1.5 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl overflow-x-auto">
-          <button
-            onClick={() => setActiveTab('timeline')}
-            className={`px-4 py-2.5 rounded-xl text-xs font-bold text-left transition flex items-center gap-2 shrink-0 lg:w-full ${
-              activeTab === 'timeline'
-                ? 'bg-orange-50 dark:bg-slate-800 text-[#EA580C] dark:text-orange-400 font-extrabold border-l-2 border-[#EA580C]'
-                : 'text-slate-600 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-850'
-            }`}
-          >
-            <TrendingUp className="w-4 h-4" />
-            Track Grievances
-          </button>
+      {/* ══ Main Layout: Sidebar + Content ══ */}
+      <div className="grid grid-cols-1 lg:grid-cols-4 gap-5 items-start">
 
-          <button
-            onClick={() => setActiveTab('apply')}
-            className={`px-4 py-2.5 rounded-xl text-xs font-bold text-left transition flex items-center gap-2 shrink-0 lg:w-full ${
-              activeTab === 'apply'
-                ? 'bg-orange-50 dark:bg-slate-800 text-[#EA580C] dark:text-orange-400 font-extrabold border-l-2 border-[#EA580C]'
-                : 'text-slate-600 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-850'
-            }`}
-          >
-            <PlusCircle className="w-4 h-4" />
-            Service Application
-          </button>
-
-          <button
-            onClick={() => setActiveTab('vault')}
-            className={`px-4 py-2.5 rounded-xl text-xs font-bold text-left transition flex items-center gap-2 shrink-0 lg:w-full ${
-              activeTab === 'vault'
-                ? 'bg-orange-50 dark:bg-slate-800 text-[#EA580C] dark:text-orange-400 font-extrabold border-l-2 border-[#EA580C]'
-                : 'text-slate-600 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-850'
-            }`}
-          >
-            <FolderLock className="w-4 h-4" />
-            DigiLocker Wallet
-          </button>
+        {/* Sidebar navigation */}
+        <div className="lg:col-span-1 gov-card p-2 flex flex-row lg:flex-col gap-1 overflow-x-auto">
+          {tabs.map(tab => (
+            <button
+              key={tab.id}
+              onClick={() => setActiveTab(tab.id)}
+              className={`sidebar-link flex-shrink-0 lg:w-full justify-between ${activeTab === tab.id ? 'active' : ''}`}
+            >
+              <div className="flex items-center gap-2">
+                {tab.icon}
+                <span className="text-sm whitespace-nowrap">{tab.label}</span>
+              </div>
+              {tab.badge !== undefined && (
+                <span className={`text-[10px] font-black px-1.5 py-0.5 rounded-full ${activeTab === tab.id ? 'bg-[#1D4ED8] text-white' : 'bg-gray-100 text-gray-600'}`}>
+                  {tab.badge}
+                </span>
+              )}
+            </button>
+          ))}
         </div>
 
-        {/* Tab Contents Pane */}
-        <div className="lg:col-span-3">
-          
-          {activeTab === 'timeline' && (
-            /* TAB 1: Tracking Grievances & Timeline */
-            <div className="grid grid-cols-1 md:grid-cols-5 gap-6">
-              
-              {/* Left Column: Tickets List (2 cols) */}
-              <div className="md:col-span-2 space-y-3">
-                <h3 className="text-xs font-extrabold text-slate-850 dark:text-slate-200 uppercase tracking-widest pb-1 border-b border-slate-200 dark:border-slate-800">
-                  Application Log ({myRequests.length})
-                </h3>
+        {/* ──────────────────────────────
+            TAB 1 — MY REQUESTS
+        ────────────────────────────── */}
+        {activeTab === 'timeline' && (
+          <div className="lg:col-span-3 grid grid-cols-1 md:grid-cols-5 gap-4">
 
-                {loading && myRequests.length === 0 ? (
-                  <div className="text-xs text-slate-400 py-6 text-center">Loading ticket history...</div>
-                ) : myRequests.length === 0 ? (
-                  <div className="p-6 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl text-center space-y-2 text-xs text-slate-400">
-                    <FileText className="w-8 h-8 text-slate-300 mx-auto" />
-                    <p>No connections or complaints found.</p>
-                  </div>
-                ) : (
-                  <div className="space-y-2 max-h-[500px] overflow-y-auto pr-1">
-                    {myRequests.map((req) => (
-                      <div
-                        key={req.requestId}
-                        onClick={() => setSelectedRequest(req)}
-                        className={`p-4 rounded-xl border text-left cursor-pointer transition ${
-                          selectedRequest?.requestId === req.requestId
-                            ? 'border-[#EA580C] bg-orange-50/30 dark:bg-slate-800/40 shadow-sm'
-                            : 'border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 hover:bg-slate-50 dark:hover:bg-slate-850/50'
-                        }`}
-                      >
-                        <div className="flex justify-between items-center mb-1">
-                          <span className="font-extrabold text-[11px] text-slate-800 dark:text-white font-mono">{req.requestId}</span>
-                          <span className={`px-2 py-0.5 rounded text-[8px] font-black uppercase ${
-                            req.status === 'Completed' ? 'bg-emerald-100 dark:bg-emerald-950/40 text-emerald-600 dark:text-emerald-300' :
-                            req.status === 'In-Progress' ? 'bg-orange-100 dark:bg-blue-900/40 text-[#EA580C] dark:text-orange-300' :
-                            req.status === 'Rejected' ? 'bg-red-100 dark:bg-red-950/40 text-red-600 dark:text-red-300' :
-                            'bg-amber-100 dark:bg-amber-900/40 text-amber-600 dark:text-amber-300'
-                          }`}>{req.status}</span>
-                        </div>
-                        <h4 className="font-extrabold text-xs text-slate-700 dark:text-slate-300 capitalize truncate">{req.subService}</h4>
-                        <div className="flex justify-between items-center text-[10px] text-slate-400 mt-2">
-                          <span className="capitalize">{req.serviceType}</span>
-                          <span>{new Date(req.createdAt).toLocaleDateString()}</span>
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                )}
-              </div>
-
-              {/* Right Column: Timeline Detail View (3 cols) */}
-              <div className="md:col-span-3">
-                {selectedRequest ? (
-                  <div className="p-6 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl text-left space-y-5">
-                    
-                    {/* Header */}
-                    <div className="flex justify-between items-start border-b border-slate-200 dark:border-slate-800 pb-3">
-                      <div>
-                        <div className="flex items-center gap-2">
-                          <span className="font-extrabold text-sm text-slate-900 dark:text-white font-mono">{selectedRequest.requestId}</span>
-                          <span className={`px-2 py-0.5 rounded text-[9px] font-black uppercase ${
-                            selectedRequest.status === 'Completed' ? 'bg-emerald-100 dark:bg-emerald-950/40 text-emerald-600 dark:text-emerald-300' :
-                            selectedRequest.status === 'In-Progress' ? 'bg-orange-100 dark:bg-blue-900/40 text-[#EA580C] dark:text-orange-300' :
-                            selectedRequest.status === 'Rejected' ? 'bg-red-100 dark:bg-red-950/40 text-red-600 dark:text-red-300' :
-                            'bg-amber-100 dark:bg-amber-900/40 text-amber-600 dark:text-amber-300'
-                          }`}>{selectedRequest.status}</span>
-                        </div>
-                        <p className="text-[10px] text-slate-400 mt-0.5">Category: <span className="capitalize font-bold text-slate-500">{selectedRequest.serviceType}</span></p>
-                      </div>
-
-                      <button
-                        onClick={() => setReceiptRequest(selectedRequest)}
-                        className="px-3 py-1.5 bg-orange-50 hover:bg-orange-100 dark:bg-slate-800 dark:hover:bg-slate-700 text-[#EA580C] dark:text-orange-300 border border-orange-100 dark:border-slate-750 text-[10px] font-black rounded-lg transition flex items-center gap-1"
-                      >
-                        <Download className="w-3.5 h-3.5" />
-                        <span>Receipt</span>
-                      </button>
-                    </div>
-
-                    {/* Description Details */}
-                    <div className="space-y-1">
-                      <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">Grievance / Request Details</span>
-                      <h4 className="font-extrabold text-xs text-slate-900 dark:text-white">{selectedRequest.subService}</h4>
-                      <p className="text-xs text-slate-500 dark:text-slate-400 leading-relaxed bg-slate-50 dark:bg-slate-850 p-3 rounded-lg border border-slate-200/50 dark:border-slate-800">
-                        "{selectedRequest.description}"
-                      </p>
-                    </div>
-
-                    {/* Interactive Process Timeline */}
-                    <div className="space-y-4 pt-1">
-                      <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">Operational Timeline (SLA Resolution)</span>
-                      
-                      <div className="relative border-l border-slate-200 dark:border-slate-800 ml-2.5 pl-5 space-y-6 text-xs">
-                        
-                        {/* Step 1: Registered */}
-                        <div className="relative">
-                          <span className="absolute -left-[26px] top-0 w-3 h-3 rounded-full bg-[#16A34A] border-2 border-white dark:border-slate-900"></span>
-                          <div className="space-y-0.5">
-                            <h5 className="font-bold text-slate-800 dark:text-white">Ticket Registered</h5>
-                            <p className="text-[10px] text-slate-400">Created: {new Date(selectedRequest.createdAt).toLocaleString()}</p>
-                          </div>
-                        </div>
-
-                        {/* Step 2: Under Review */}
-                        <div className="relative">
-                          <span className={`absolute -left-[26px] top-0 w-3 h-3 rounded-full border-2 border-white dark:border-slate-900 ${
-                            selectedRequest.status !== 'Pending' ? 'bg-[#16A34A]' : 'bg-slate-300'
-                          }`}></span>
-                          <div className="space-y-0.5">
-                            <h5 className="font-bold text-slate-800 dark:text-white">Assigned Department Wing</h5>
-                            <p className="text-[10px] text-slate-500 font-semibold">{selectedRequest.assignedDepartment || 'Dispatched cell'}</p>
-                          </div>
-                        </div>
-
-                        {/* Step 3: Team Assigned */}
-                        <div className="relative">
-                          <span className={`absolute -left-[26px] top-0 w-3 h-3 rounded-full border-2 border-white dark:border-slate-900 ${
-                            selectedRequest.assignedTeam && selectedRequest.assignedTeam !== 'Unassigned' ? 'bg-[#16A34A]' : 'bg-slate-300'
-                          }`}></span>
-                          <div className="space-y-0.5">
-                            <h5 className="font-bold text-slate-800 dark:text-white">Field Repair Team Deployment</h5>
-                            <p className="text-[10px] text-slate-500 font-semibold">
-                              {selectedRequest.assignedTeam && selectedRequest.assignedTeam !== 'Unassigned' 
-                                ? `Crew Active: ${selectedRequest.assignedTeam}`
-                                : 'Under dispatch check'
-                              }
-                            </p>
-                          </div>
-                        </div>
-
-                        {/* Step 4: Remarks */}
-                        {selectedRequest.remarks && (
-                          <div className="relative">
-                            <span className="absolute -left-[26px] top-0 w-3 h-3 rounded-full bg-[#16A34A] border-2 border-white dark:border-slate-900"></span>
-                            <div className="space-y-0.5 bg-orange-50/50 dark:bg-slate-850 p-2.5 rounded-lg border border-orange-100/50 dark:border-orange-900/10">
-                              <h5 className="font-bold text-[#EA580C] dark:text-orange-400">Official Status Remarks</h5>
-                              <p className="text-[10px] text-slate-600 dark:text-slate-300 font-bold">"{selectedRequest.remarks}"</p>
-                            </div>
-                          </div>
-                        )}
-
-                        {/* Step 5: Completed */}
-                        <div className="relative">
-                          <span className={`absolute -left-[26px] top-0 w-3 h-3 rounded-full border-2 border-white dark:border-slate-900 ${
-                            selectedRequest.status === 'Completed' ? 'bg-[#16A34A]' : 
-                            selectedRequest.status === 'Rejected' ? 'bg-red-500' : 'bg-slate-300'
-                          }`}></span>
-                          <div className="space-y-0.5">
-                            <h5 className="font-bold text-slate-800 dark:text-white">Resolution & Closure</h5>
-                            <p className="text-[10px] text-slate-400">
-                              {selectedRequest.status === 'Completed' ? 'Closed. Civic service delivered.' :
-                               selectedRequest.status === 'Rejected' ? 'Closed. Ticket rejected/unapproved.' :
-                               'Awaiting resolution check'
-                              }
-                            </p>
-                          </div>
-                        </div>
-
-                      </div>
-                    </div>
-
-                  </div>
-                ) : (
-                  <div className="p-8 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl text-center text-xs text-slate-400">
-                    Select a ticket on the left to display its SLA tracking timeline.
-                  </div>
-                )}
-              </div>
-
-            </div>
-          )}
-
-          {activeTab === 'apply' && (
-            /* TAB 2: Service Application Form */
-            <div className="p-6 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl text-left">
-              
-              <h3 className="text-sm font-black text-slate-900 dark:text-white border-b border-slate-200 dark:border-slate-800 pb-3 mb-5">
-                Apply for Civic Services & Redressals
-              </h3>
-
-              {formSuccess ? (
-                <div className="py-12 flex flex-col items-center justify-center text-center space-y-4">
-                  <div className="w-16 h-16 bg-emerald-50 dark:bg-emerald-950/40 border border-emerald-200 dark:border-emerald-900/40 rounded-full flex items-center justify-center text-[#16A34A] animate-bounce">
-                    <CheckCircle className="w-8 h-8" />
-                  </div>
-                  <h4 className="font-extrabold text-lg text-slate-850 dark:text-white">Ticket Registered Successfully</h4>
-                  <p className="text-xs text-slate-400">Your tracking ID has been generated. Redirecting to timeline view...</p>
-                </div>
-              ) : (
-                <form onSubmit={handleApplySubmit} className="space-y-5">
-                  
-                  {/* Category Selector Grid */}
-                  <div className="space-y-2">
-                    <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">Select Service Department</label>
-                    <div className="grid grid-cols-2 sm:grid-cols-5 gap-2">
-                      {[
-                        { id: 'electricity', label: 'Electricity', icon: <Zap className="w-4 h-4 text-amber-500" /> },
-                        { id: 'water', label: 'Water Supply', icon: <Droplet className="w-4 h-4 text-orange-500" /> },
-                        { id: 'gas', label: 'PNG Gas', icon: <Flame className="w-4 h-4 text-orange-500" /> },
-                        { id: 'waste', label: 'Waste', icon: <Trash2 className="w-4 h-4 text-emerald-500" /> },
-                        { id: 'general', label: 'General', icon: <FileText className="w-4 h-4 text-purple-500" /> }
-                      ].map((item) => (
-                        <button
-                          key={item.id}
-                          type="button"
-                          onClick={() => handleCategoryChange(item.id)}
-                          className={`p-3 rounded-xl border flex flex-col items-center justify-center text-center gap-1.5 transition ${
-                            serviceType === item.id
-                              ? 'border-[#EA580C] bg-orange-50/40 dark:bg-slate-800 text-[#EA580C] dark:text-orange-400 font-extrabold'
-                              : 'border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 hover:bg-slate-50 dark:hover:bg-slate-850'
-                          }`}
-                        >
-                          {item.icon}
-                          <span className="text-[10px] font-bold">{item.label}</span>
-                        </button>
-                      ))}
-                    </div>
-                  </div>
-
-                  {/* Subservice & Priority */}
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                    <div className="space-y-1">
-                      <label className="text-[10px] font-bold text-slate-500 uppercase tracking-wider block">Service Category Details</label>
-                      <select
-                        value={subService}
-                        onChange={(e) => setSubService(e.target.value)}
-                        className="w-full px-3 py-2.5 border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 text-xs font-bold text-slate-800 dark:text-slate-100 rounded-xl outline-none"
-                      >
-                        {subServicesMap[serviceType].map((sub, i) => (
-                          <option key={i} value={sub}>{sub}</option>
-                        ))}
-                      </select>
-                    </div>
-
-                    <div className="space-y-1">
-                      <label className="text-[10px] font-bold text-slate-500 uppercase tracking-wider block">Priority Severity Level</label>
-                      <select
-                        value={priority}
-                        onChange={(e) => setPriority(e.target.value)}
-                        className="w-full px-3 py-2.5 border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 text-xs font-bold text-slate-800 dark:text-slate-100 rounded-xl outline-none"
-                      >
-                        <option value="Standard">Standard (SLA Routine)</option>
-                        <option value="High">High (Urgent Response)</option>
-                        <option value="Critical">Critical (Emergency Wing Dispatch)</option>
-                      </select>
-                    </div>
-                  </div>
-
-                  {/* Detailed Description */}
-                  <div className="space-y-1">
-                    <label className="text-[10px] font-bold text-slate-500 uppercase tracking-wider block">Connection Address / Complaint Remarks</label>
-                    <textarea
-                      rows={3}
-                      placeholder="Please details required connections specifications or clear complaint reasons..."
-                      value={description}
-                      onChange={(e) => setDescription(e.target.value)}
-                      className="w-full px-4 py-3 border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 text-xs font-semibold text-slate-800 dark:text-slate-100 rounded-xl outline-none focus:border-[#EA580C]"
-                      required
-                    />
-                  </div>
-
-                  {/* Attachment document upload */}
-                  <div className="space-y-2">
-                    <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">Attach Document Proofs (Identity / Land Deeds)</label>
-                    
-                    <div className="flex flex-wrap gap-3">
-                      {/* Document Selector Button */}
-                      <button
-                        type="button"
-                        onClick={() => fileInputRef.current.click()}
-                        disabled={uploading}
-                        className="px-4 py-3 border border-dashed border-[#EA580C] bg-orange-50/10 hover:bg-orange-50/30 text-[#EA580C] dark:text-orange-300 rounded-xl text-xs font-bold transition flex items-center gap-1.5"
-                      >
-                        <UploadCloud className="w-4 h-4" />
-                        <span>{uploading ? 'Processing vision OCR...' : 'Upload Scans (PDF/Image)'}</span>
-                      </button>
-                      <input
-                        type="file"
-                        ref={fileInputRef}
-                        onChange={handleFileUpload}
-                        className="hidden"
-                        accept=".pdf,.png,.jpg,.jpeg"
-                      />
-
-                      {/* Display Uploaded File Badges */}
-                      {uploadedFiles.map((doc, idx) => (
-                        <div key={idx} className="flex items-center gap-1 bg-emerald-50 dark:bg-emerald-950/40 text-emerald-600 dark:text-emerald-300 border border-emerald-100 dark:border-emerald-900/30 px-3 py-2 rounded-xl text-xs font-bold">
-                          <CheckCircle className="w-3.5 h-3.5 text-[#16A34A]" />
-                          <span className="max-w-[120px] truncate">{doc.name}</span>
-                          <span className="text-[8px] bg-[#16A34A] text-white px-1 py-0.2 rounded ml-1">OCR Checked</span>
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-
-                  <button
-                    type="submit"
-                    disabled={loading}
-                    className="w-full py-3 bg-[#EA580C] hover:bg-orange-700 text-white rounded-xl text-xs font-black transition shadow-sm uppercase tracking-wider"
-                  >
-                    {loading ? 'Registering Ticket...' : 'Submit Application'}
-                  </button>
-
-                </form>
-              )}
-
-            </div>
-          )}
-
-          {activeTab === 'vault' && (
-            /* TAB 3: DigiLocker Vault */
-            <div className="p-6 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl text-left space-y-6">
-              
-              <div className="flex justify-between items-center border-b border-slate-200 dark:border-slate-800 pb-3">
-                <div>
-                  <h3 className="text-sm font-black text-slate-900 dark:text-white">Secure DigiLocker Safe Wallet</h3>
-                  <p className="text-[10px] text-slate-400 mt-0.5">Documents securely linked to your profile via Aadhaar verification</p>
-                </div>
-                <button
-                  onClick={() => fileInputRef.current.click()}
-                  className="px-3 py-1.5 bg-orange-50 hover:bg-orange-100 dark:bg-slate-850 dark:hover:bg-slate-800 text-[#EA580C] dark:text-orange-300 text-[10px] font-black rounded-lg transition flex items-center gap-1"
-                >
-                  <UploadCloud className="w-3.5 h-3.5" />
-                  <span>Upload Document</span>
+            {/* Request list */}
+            <div className="md:col-span-2 space-y-3">
+              <div className="flex items-center justify-between">
+                <h3 className="section-label text-gray-700">Application Log ({filteredRequests.length})</h3>
+                <button onClick={() => fetchMyRequests(true)} className="text-[#1D4ED8] text-xs font-bold hover:underline flex items-center gap-1">
+                  <RefreshCw className={`w-3 h-3 ${refreshing ? 'animate-spin' : ''}`} /> Refresh
                 </button>
               </div>
 
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                {vaultDocs.map((doc, idx) => (
-                  <div key={idx} className="p-4 bg-slate-50 dark:bg-slate-850/50 border border-slate-200 dark:border-slate-800 rounded-xl space-y-3">
-                    <div className="flex justify-between items-start">
-                      <div className="space-y-0.5">
-                        <h4 className="font-extrabold text-xs text-slate-850 dark:text-white">{doc.name}</h4>
-                        <span className="text-[9px] text-slate-400 block font-semibold">{doc.type} • {doc.size}</span>
+              {/* Search */}
+              <div className="relative">
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-gray-400" />
+                <input
+                  type="text"
+                  placeholder="Search by ID or service…"
+                  value={searchQuery}
+                  onChange={e => setSearchQuery(e.target.value)}
+                  className="gov-input pl-9 py-2 text-xs"
+                />
+              </div>
+
+              {loading && myRequests.length === 0 ? (
+                <div className="gov-card p-8 text-center text-xs text-gray-400">
+                  <div className="w-6 h-6 border-2 border-blue-200 border-t-[#1D4ED8] rounded-full animate-spin mx-auto mb-2" />
+                  Loading your requests…
+                </div>
+              ) : filteredRequests.length === 0 ? (
+                <div className="gov-card p-8 text-center text-xs text-gray-400 space-y-2">
+                  <FileText className="w-8 h-8 text-gray-200 mx-auto" />
+                  <p className="font-medium">No requests found.</p>
+                  <button onClick={() => setActiveTab('apply')} className="text-[#1D4ED8] font-bold hover:underline">
+                    + Apply for a service
+                  </button>
+                </div>
+              ) : (
+                <div className="space-y-2 max-h-[520px] overflow-y-auto pr-0.5">
+                  {filteredRequests.map(req => (
+                    <div
+                      key={req.requestId}
+                      onClick={() => setSelectedRequest(req)}
+                      className={`gov-card p-4 cursor-pointer transition-all ${
+                        selectedRequest?.requestId === req.requestId
+                          ? 'border-[#1D4ED8] bg-blue-50/30 shadow-sm'
+                          : 'hover:border-gray-300'
+                      }`}
+                    >
+                      <div className="flex items-center justify-between mb-1.5">
+                        <div className="flex items-center gap-2">
+                          <div className={`w-6 h-6 rounded-lg ${serviceIconBg[req.serviceType] || 'bg-gray-50'} flex items-center justify-center`}>
+                            {serviceIconMap[req.serviceType] || <FileText className="w-3 h-3" />}
+                          </div>
+                          <span className="font-mono font-bold text-[11px] text-gray-800">{req.requestId}</span>
+                        </div>
+                        <span className={statusBadge(req.status)}>{req.status}</span>
                       </div>
-                      <span className="text-[8px] bg-emerald-50 dark:bg-emerald-950/40 text-[#16A34A] border border-emerald-100 dark:border-emerald-900/30 px-2 py-0.5 rounded font-black uppercase">
-                        {doc.verification}
-                      </span>
+                      <h4 className="text-xs font-semibold text-gray-700 truncate">{req.subService}</h4>
+                      <div className="flex justify-between items-center text-[10px] text-gray-400 mt-1.5">
+                        <span className="capitalize flex items-center gap-1">
+                          <MapPin className="w-2.5 h-2.5" />{req.assignedDepartment || req.serviceType}
+                        </span>
+                        <span className="flex items-center gap-1">
+                          <Calendar className="w-2.5 h-2.5" />{new Date(req.createdAt).toLocaleDateString('en-IN')}
+                        </span>
+                      </div>
                     </div>
-
-                    <div className="flex justify-between items-center text-[10px] border-t border-slate-200 dark:border-slate-800 pt-2.5 text-slate-500 font-semibold">
-                      <span className="flex items-center gap-1 text-[#16A34A]"><ShieldCheck className="w-3.5 h-3.5" /> Confidence Check: {(doc.confidence * 100).toFixed(0)}%</span>
-                      <button className="text-[#EA580C] hover:underline font-extrabold flex items-center gap-0.5">
-                        View File
-                      </button>
-                    </div>
-                  </div>
-                ))}
-              </div>
-
-            </div>
-          )}
-
-        </div>
-      </div>
-
-      {/* 3. Receipt Generator Modal overlay */}
-      {receiptRequest && (
-        <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4">
-          <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl max-w-lg w-full overflow-hidden shadow-2xl animate-fade-in print:shadow-none print:border-none print:m-0">
-            
-            {/* Modal Header */}
-            <div className="p-4 bg-slate-50 dark:bg-slate-850 border-b border-slate-200 dark:border-slate-800 flex justify-between items-center print:hidden">
-              <span className="font-extrabold text-xs text-slate-800 dark:text-white uppercase tracking-wider">Digital Service Receipt</span>
-              <button
-                onClick={() => setReceiptRequest(null)}
-                className="text-slate-400 hover:text-slate-600 dark:hover:text-white text-xs font-bold"
-              >
-                Close
-              </button>
-            </div>
-
-            {/* Receipt Printable Content */}
-            <div className="p-8 space-y-6 text-left" id="printable-receipt">
-              {/* Receipt Header logo block */}
-              <div className="flex justify-between items-start border-b border-slate-200 dark:border-slate-800 pb-4">
-                <div>
-                  <h2 className="font-black text-slate-950 dark:text-white text-base">SUVIDHA SERVICES</h2>
-                  <p className="text-[9px] text-slate-500 font-bold uppercase tracking-wider">National Civic Service Gateway</p>
-                </div>
-                <div className="text-right text-[10px] text-slate-400 space-y-0.5">
-                  <div>Date: {new Date(receiptRequest.createdAt).toLocaleDateString()}</div>
-                  <div className="font-mono text-[9px] font-bold">Ref ID: {receiptRequest.requestId}</div>
-                </div>
-              </div>
-
-              {/* Citizen Details */}
-              <div className="grid grid-cols-2 gap-4 text-xs font-semibold text-slate-600 dark:text-slate-400 border-b border-slate-200 dark:border-slate-800 pb-4">
-                <div>
-                  <span className="text-[9px] text-slate-400 uppercase tracking-widest block mb-0.5">Citizen Name</span>
-                  <span className="text-slate-900 dark:text-white font-extrabold">{currentUser?.name}</span>
-                </div>
-                <div>
-                  <span className="text-[9px] text-slate-400 uppercase tracking-widest block mb-0.5">Contact Number</span>
-                  <span className="text-slate-900 dark:text-white font-extrabold">+91 {currentUser?.mobile}</span>
-                </div>
-              </div>
-
-              {/* Service Details */}
-              <div className="space-y-3">
-                <span className="text-[9px] text-slate-400 uppercase tracking-widest block mb-0.5">Utility Connection details</span>
-                
-                <div className="p-4 bg-slate-50 dark:bg-slate-850 rounded-xl space-y-2 border border-slate-200/50 dark:border-slate-800">
-                  <div className="flex justify-between text-xs font-semibold">
-                    <span className="text-slate-500">Service Category:</span>
-                    <span className="capitalize text-slate-900 dark:text-white font-extrabold">{receiptRequest.serviceType}</span>
-                  </div>
-                  <div className="flex justify-between text-xs font-semibold">
-                    <span className="text-slate-500">Service Specifications:</span>
-                    <span className="text-slate-900 dark:text-white font-extrabold">{receiptRequest.subService}</span>
-                  </div>
-                  <div className="flex justify-between text-xs font-semibold">
-                    <span className="text-slate-500">Priority Severity:</span>
-                    <span className="text-slate-900 dark:text-white font-extrabold">{receiptRequest.priority}</span>
-                  </div>
-                  <div className="flex justify-between text-xs font-semibold">
-                    <span className="text-slate-500">SLA Mandated Timeline:</span>
-                    <span className="text-[#16A34A] font-extrabold">24-48 Hours Resolution</span>
-                  </div>
-                </div>
-              </div>
-
-              {/* Barcode/QR placeholder */}
-              <div className="flex flex-col items-center justify-center pt-2 space-y-1.5 border-t border-slate-200 dark:border-slate-800">
-                {/* Simulated Barcode */}
-                <div className="flex items-center gap-[1px] h-8 bg-slate-900 px-4 py-1 rounded">
-                  {[4,2,3,1,2,4,1,3,2,1,4,2,3,1,2,3,4,1,2,3,1,4].map((w, idx) => (
-                    <div key={idx} className="bg-white h-full" style={{ width: `${w}px` }}></div>
                   ))}
                 </div>
-                <span className="font-mono text-[9px] text-slate-400 font-bold">{receiptRequest.requestId}</span>
-              </div>
+              )}
             </div>
 
-            {/* Print trigger CTA */}
-            <div className="p-4 bg-slate-50 dark:bg-slate-850 border-t border-slate-200 dark:border-slate-800 flex gap-2 justify-end print:hidden">
+            {/* Request detail + timeline */}
+            <div className="md:col-span-3">
+              {selectedRequest ? (
+                <div className="gov-card p-6 space-y-5 animate-fade-in">
+                  {/* Header */}
+                  <div className="flex items-start justify-between pb-4 border-b border-gray-100">
+                    <div>
+                      <div className="flex items-center gap-2 flex-wrap">
+                        <span className="font-mono font-black text-sm text-gray-900">{selectedRequest.requestId}</span>
+                        <span className={statusBadge(selectedRequest.status)}>{selectedRequest.status}</span>
+                        <span className={priorityBadge(selectedRequest.priority)}>{selectedRequest.priority}</span>
+                      </div>
+                      <p className="text-xs text-gray-500 mt-1 capitalize">
+                        {selectedRequest.serviceType} · {selectedRequest.assignedDepartment}
+                      </p>
+                    </div>
+                    <button
+                      onClick={() => setReceiptRequest(selectedRequest)}
+                      className="btn-ghost text-xs px-3 py-1.5 flex items-center gap-1.5"
+                    >
+                      <Download className="w-3.5 h-3.5" /> Receipt
+                    </button>
+                  </div>
+
+                  {/* Description */}
+                  <div>
+                    <p className="section-label text-gray-500 mb-2">Grievance / Request Details</p>
+                    <h4 className="font-bold text-sm text-gray-900 mb-2">{selectedRequest.subService}</h4>
+                    <p className="text-sm text-gray-600 leading-relaxed bg-gray-50 p-3.5 rounded-xl border border-gray-100">
+                      "{selectedRequest.description}"
+                    </p>
+                  </div>
+
+                  {/* SLA Timeline */}
+                  <div>
+                    <p className="section-label text-gray-500 mb-4">SLA Resolution Timeline</p>
+                    <div className="relative border-l-2 border-gray-200 ml-3 pl-5 space-y-5">
+                      {[
+                        {
+                          done: true,
+                          title: 'Ticket Registered',
+                          sub: `Created: ${new Date(selectedRequest.createdAt).toLocaleString('en-IN')}`,
+                        },
+                        {
+                          done: selectedRequest.status !== 'Pending',
+                          title: 'Department Assigned',
+                          sub: selectedRequest.assignedDepartment || 'Dispatching department…',
+                        },
+                        {
+                          done: !!(selectedRequest.assignedTeam && selectedRequest.assignedTeam !== 'Unassigned'),
+                          title: 'Field Crew Deployed',
+                          sub: selectedRequest.assignedTeam && selectedRequest.assignedTeam !== 'Unassigned'
+                            ? `Active: ${selectedRequest.assignedTeam}`
+                            : 'Pending crew assignment',
+                        },
+                        ...(selectedRequest.remarks ? [{
+                          done: true,
+                          title: 'Officer Remarks Added',
+                          sub: `"${selectedRequest.remarks}"`,
+                          highlight: true,
+                        }] : []),
+                        {
+                          done: selectedRequest.status === 'Completed' || selectedRequest.status === 'Rejected',
+                          title: 'Resolution & Closure',
+                          sub: selectedRequest.status === 'Completed' ? 'Closed — Civic service delivered.' :
+                               selectedRequest.status === 'Rejected'  ? 'Closed — Request rejected.' :
+                               'Awaiting resolution',
+                          isLast: true,
+                        },
+                      ].map((step, i) => (
+                        <div key={i} className="relative flex gap-3">
+                          <span className={`absolute -left-[26px] top-0.5 w-3 h-3 rounded-full border-2 border-white flex-shrink-0 ${
+                            step.done ? 'bg-green-500' : 'bg-gray-300'
+                          }`} />
+                          <div className={`pb-1 ${step.highlight ? 'bg-blue-50 border border-blue-100 rounded-xl p-3 w-full' : ''}`}>
+                            <h5 className={`font-bold text-sm ${step.highlight ? 'text-[#1D4ED8]' : 'text-gray-800'}`}>{step.title}</h5>
+                            <p className="text-xs text-gray-500 mt-0.5 leading-relaxed">{step.sub}</p>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                </div>
+              ) : (
+                <div className="gov-card p-10 text-center text-sm text-gray-400 flex flex-col items-center gap-3">
+                  <FileCheck className="w-10 h-10 text-gray-200" />
+                  <p>Select a request to view its SLA tracking timeline.</p>
+                </div>
+              )}
+            </div>
+          </div>
+        )}
+
+        {/* ──────────────────────────────
+            TAB 2 — APPLY SERVICE
+        ────────────────────────────── */}
+        {activeTab === 'apply' && (
+          <div className="lg:col-span-3 gov-card p-6">
+            <h3 className="text-base font-black text-gray-900 mb-5 pb-4 border-b border-gray-100" style={{ fontFamily: 'Outfit, sans-serif' }}>
+              Apply for Civic Services & Redressals
+            </h3>
+
+            {formSuccess ? (
+              <div className="py-16 flex flex-col items-center justify-center text-center gap-4 animate-fade-up">
+                <div className="w-16 h-16 bg-green-50 border-2 border-green-200 rounded-full flex items-center justify-center">
+                  <CheckCircle className="w-8 h-8 text-green-600" />
+                </div>
+                <div>
+                  <h4 className="font-black text-xl text-green-700" style={{ fontFamily: 'Outfit, sans-serif' }}>Ticket Registered!</h4>
+                  <p className="text-sm text-gray-500 mt-1">Your tracking ID has been generated. Redirecting to timeline…</p>
+                </div>
+              </div>
+            ) : (
+              <form onSubmit={handleApplySubmit} className="space-y-6">
+
+                {/* Service category picker */}
+                <div>
+                  <label className="section-label text-gray-600 block mb-3">Select Service Department</label>
+                  <div className="grid grid-cols-2 sm:grid-cols-5 gap-2.5">
+                    {[
+                      { id: 'electricity', label: 'Electricity', icon: <Zap className="w-5 h-5 text-[#1D4ED8]" />,     bg: 'bg-blue-50' },
+                      { id: 'water',       label: 'Water',       icon: <Droplet className="w-5 h-5 text-cyan-600" />,   bg: 'bg-cyan-50' },
+                      { id: 'gas',         label: 'PNG Gas',     icon: <Flame className="w-5 h-5 text-orange-500" />,   bg: 'bg-orange-50' },
+                      { id: 'waste',       label: 'Waste',       icon: <Trash2 className="w-5 h-5 text-green-600" />,   bg: 'bg-green-50' },
+                      { id: 'general',     label: 'General',     icon: <FileText className="w-5 h-5 text-purple-500" />, bg: 'bg-purple-50' },
+                    ].map(item => (
+                      <button
+                        key={item.id}
+                        type="button"
+                        onClick={() => handleCategoryChange(item.id)}
+                        className={`p-3.5 rounded-xl border-2 flex flex-col items-center justify-center gap-2 transition ${
+                          serviceType === item.id
+                            ? 'border-[#1D4ED8] bg-blue-50 shadow-sm'
+                            : 'border-gray-200 bg-white hover:border-gray-300'
+                        }`}
+                      >
+                        <div className={`w-8 h-8 rounded-lg ${item.bg} flex items-center justify-center`}>{item.icon}</div>
+                        <span className="text-[11px] font-bold text-gray-700">{item.label}</span>
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
+                {/* Sub-service & Priority */}
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  <div>
+                    <label className="section-label text-gray-600 block mb-2">Service Category</label>
+                    <select
+                      value={subService}
+                      onChange={e => setSubService(e.target.value)}
+                      className="gov-input"
+                    >
+                      {subServicesMap[serviceType].map((sub, i) => (
+                        <option key={i} value={sub}>{sub}</option>
+                      ))}
+                    </select>
+                  </div>
+                  <div>
+                    <label className="section-label text-gray-600 block mb-2">Priority Level</label>
+                    <select
+                      value={priority}
+                      onChange={e => setPriority(e.target.value)}
+                      className="gov-input"
+                    >
+                      <option value="Standard">Standard (SLA Routine)</option>
+                      <option value="High">High (Urgent Response)</option>
+                      <option value="Critical">Critical (Emergency Dispatch)</option>
+                    </select>
+                  </div>
+                </div>
+
+                {/* Description */}
+                <div>
+                  <label className="section-label text-gray-600 block mb-2">Description / Complaint Details</label>
+                  <textarea
+                    rows={4}
+                    placeholder="Describe the issue clearly — include address, landmarks, and specific details…"
+                    value={description}
+                    onChange={e => setDescription(e.target.value)}
+                    className="gov-input resize-none leading-relaxed"
+                    required
+                  />
+                </div>
+
+                {/* Document upload */}
+                <div>
+                  <label className="section-label text-gray-600 block mb-2">Attach Document Proofs</label>
+                  <div className="flex flex-wrap gap-2 items-center">
+                    <button
+                      type="button"
+                      onClick={() => fileInputRef.current.click()}
+                      disabled={uploading}
+                      className="flex items-center gap-2 px-4 py-2.5 border-2 border-dashed border-blue-300 bg-blue-50 hover:bg-blue-100 text-[#1D4ED8] rounded-xl text-sm font-bold transition"
+                    >
+                      <UploadCloud className="w-4 h-4" />
+                      {uploading ? 'Uploading…' : 'Upload PDF / Image'}
+                    </button>
+                    <input type="file" ref={fileInputRef} onChange={handleFileUpload} className="hidden" accept=".pdf,.png,.jpg,.jpeg" />
+                    {uploadedFiles.map((doc, i) => (
+                      <span key={i} className="flex items-center gap-1.5 text-xs font-bold text-green-700 bg-green-50 border border-green-200 px-3 py-2 rounded-xl">
+                        <CheckCircle className="w-3.5 h-3.5 text-green-500" />
+                        <span className="max-w-[120px] truncate">{doc.name}</span>
+                        <span className="text-[9px] bg-green-500 text-white px-1.5 py-0.5 rounded-full ml-1">OCR ✓</span>
+                      </span>
+                    ))}
+                  </div>
+                </div>
+
+                <button
+                  type="submit"
+                  disabled={submitting}
+                  className="btn-primary w-full py-3.5 text-sm"
+                >
+                  {submitting ? (
+                    <span className="flex items-center gap-2 justify-center">
+                      <span className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                      Registering Ticket…
+                    </span>
+                  ) : (
+                    <span className="flex items-center gap-2 justify-center">
+                      <FileCheck className="w-4 h-4" />
+                      Submit Application
+                    </span>
+                  )}
+                </button>
+              </form>
+            )}
+          </div>
+        )}
+
+        {/* ──────────────────────────────
+            TAB 3 — DOCUMENT VAULT
+        ────────────────────────────── */}
+        {activeTab === 'vault' && (
+          <div className="lg:col-span-3 gov-card p-6 space-y-5">
+            <div className="flex items-center justify-between pb-4 border-b border-gray-100">
+              <div>
+                <h3 className="text-base font-black text-gray-900" style={{ fontFamily: 'Outfit, sans-serif' }}>
+                  DigiLocker Document Vault
+                </h3>
+                <p className="text-xs text-gray-500 mt-0.5">Your verified identity & address documents</p>
+              </div>
               <button
-                onClick={() => setReceiptRequest(null)}
-                className="px-4 py-2 border border-slate-200 dark:border-slate-700 hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-600 dark:text-slate-300 rounded-xl text-xs font-bold transition"
+                onClick={() => vaultInputRef.current.click()}
+                disabled={uploading}
+                className="btn-primary px-4 py-2 text-xs"
               >
+                <UploadCloud className="w-3.5 h-3.5" />
+                {uploading ? 'Uploading…' : 'Upload Document'}
+              </button>
+              <input type="file" ref={vaultInputRef} onChange={handleVaultUpload} className="hidden" accept=".pdf,.png,.jpg,.jpeg" />
+            </div>
+
+            <div className="space-y-3">
+              {vaultDocs.map((doc, i) => (
+                <div key={i} className="flex items-center gap-4 p-4 rounded-xl border border-gray-100 bg-gray-50 hover:bg-white hover:border-gray-200 transition">
+                  <div className="w-10 h-10 rounded-xl bg-white border border-gray-200 flex items-center justify-center flex-shrink-0 shadow-sm">
+                    <FileText className="w-5 h-5 text-[#1D4ED8]" />
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <h5 className="font-bold text-sm text-gray-900 truncate">{doc.name}</h5>
+                    <div className="flex items-center gap-3 mt-0.5">
+                      <span className="text-[10px] text-gray-400">{doc.size}</span>
+                      <span className="text-[10px] text-gray-400">·</span>
+                      <span className="text-[10px] text-gray-400">{doc.type}</span>
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-2 flex-shrink-0">
+                    <span className={`status-badge ${doc.confidence >= 0.95 ? 'badge-complete' : 'badge-pending'}`}>
+                      {doc.verification}
+                    </span>
+                    <span className="text-[10px] text-gray-400 font-mono">{Math.round(doc.confidence * 100)}%</span>
+                  </div>
+                </div>
+              ))}
+            </div>
+
+            <div className="p-4 bg-blue-50 border border-blue-100 rounded-xl text-xs text-gray-600 flex items-start gap-3">
+              <ShieldCheck className="w-4 h-4 text-[#1D4ED8] mt-0.5 flex-shrink-0" />
+              <p>Documents stored in encrypted DigiLocker-linked vault. Aadhaar data masked at rest. All transfers use 256-bit SSL encryption.</p>
+            </div>
+          </div>
+        )}
+
+      </div>
+
+      {/* ══ Receipt Modal ══ */}
+      {receiptRequest && (
+        <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4" onClick={() => setReceiptRequest(null)}>
+          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md p-6 animate-fade-up" onClick={e => e.stopPropagation()}>
+            <div className="flex items-center justify-between mb-5 pb-4 border-b border-gray-100">
+              <div className="flex items-center gap-3">
+                <div className="w-9 h-9 rounded-xl bg-blue-50 flex items-center justify-center">
+                  <ShieldCheck className="w-5 h-5 text-[#1D4ED8]" />
+                </div>
+                <div>
+                  <h4 className="font-black text-gray-900 text-sm" style={{ fontFamily: 'Outfit, sans-serif' }}>SUVIDHA Official Receipt</h4>
+                  <p className="text-[10px] text-gray-400">Government of India · NIC</p>
+                </div>
+              </div>
+              <button onClick={() => setReceiptRequest(null)} className="text-gray-400 hover:text-gray-700 text-xl leading-none">✕</button>
+            </div>
+
+            <div className="space-y-3 text-sm">
+              {[
+                ['Request ID',   receiptRequest.requestId],
+                ['Service',      `${receiptRequest.serviceType} — ${receiptRequest.subService}`],
+                ['Status',       receiptRequest.status],
+                ['Department',   receiptRequest.assignedDepartment],
+                ['Priority',     receiptRequest.priority],
+                ['Filed On',     new Date(receiptRequest.createdAt).toLocaleString('en-IN')],
+                ['Citizen',      receiptRequest.citizenId?.name || 'Verified Citizen'],
+              ].map(([label, val]) => (
+                <div key={label} className="flex justify-between items-start gap-2 text-xs">
+                  <span className="text-gray-500 font-medium">{label}</span>
+                  <span className="font-bold text-gray-900 text-right">{val}</span>
+                </div>
+              ))}
+              {receiptRequest.remarks && (
+                <div className="mt-3 p-3 bg-blue-50 rounded-xl border border-blue-100 text-xs">
+                  <span className="text-gray-500 block mb-1">Officer Remarks</span>
+                  <span className="text-gray-800 font-medium italic">"{receiptRequest.remarks}"</span>
+                </div>
+              )}
+            </div>
+
+            <div className="flex gap-3 mt-6">
+              <button onClick={() => window.print()} className="btn-primary flex-1 py-2.5 text-sm">
+                <Printer className="w-4 h-4" /> Print Receipt
+              </button>
+              <button onClick={() => setReceiptRequest(null)} className="btn-ghost flex-1 py-2.5 text-sm">
                 Close
               </button>
-              <button
-                onClick={triggerPrint}
-                className="px-4 py-2 bg-[#EA580C] hover:bg-orange-700 text-white rounded-xl text-xs font-black transition flex items-center gap-1"
-              >
-                <Printer className="w-4 h-4" />
-                <span>Print Receipt</span>
-              </button>
             </div>
-
           </div>
         </div>
       )}

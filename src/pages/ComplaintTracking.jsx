@@ -3,16 +3,15 @@ import { useLocation, useNavigate } from 'react-router-dom';
 import { useLanguage } from '../context/LanguageContext';
 import { useAccessibility } from '../context/AccessibilityContext';
 import { 
-  Search, 
-  CheckCircle2, 
-  Clock, 
-  Printer, 
-  AlertTriangle,
-  Building,
-  RefreshCw
+  Search, CheckCircle2, Clock, Printer, AlertTriangle, Building2, RefreshCw, Calendar, MapPin
 } from 'lucide-react';
 import { requestAPI } from '../utils/api';
 import { io } from 'socket.io-client';
+
+const statusBadge = (s) => {
+  const m = { Completed: 'badge-complete', 'In-Progress': 'badge-progress', Rejected: 'badge-rejected', Pending: 'badge-pending', Approved: 'badge-approved' };
+  return `status-badge ${m[s] || 'badge-standard'}`;
+};
 
 export const ComplaintTracking = () => {
   const navigate = useNavigate();
@@ -80,7 +79,7 @@ export const ComplaintTracking = () => {
         setHasSearched(true);
         speak("Ticket details loaded successfully");
       } else {
-        setErrorMsg('Ticket reference ID not found.');
+        setErrorMsg('Ticket reference ID not found. Use a standard format like REQ-2026-982739');
         setTicketDetails(null);
       }
     } catch (err) {
@@ -109,40 +108,40 @@ export const ComplaintTracking = () => {
   };
 
   return (
-    <div className="flex-1 flex flex-col space-y-6 max-w-3xl mx-auto w-full py-4 text-left">
+    <div className="flex-1 flex flex-col space-y-6 max-w-3xl mx-auto w-full py-4 text-left animate-fade-up">
       
       {/* Search Header card */}
       <div className={`p-6 rounded-2xl border ${
-        highContrast ? 'border-yellow-400 bg-black text-yellow-400' : 'bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-800 shadow-sm'
+        highContrast ? 'border-yellow-400 bg-black text-yellow-400' : 'bg-white border-gray-200 shadow-sm'
       }`}>
-        <h2 className="text-lg font-black text-slate-900 dark:text-white flex items-center gap-2 mb-3">
-          <Search className="w-5 h-5 text-[#EA580C]" />
+        <h2 className="text-lg font-black text-gray-900 flex items-center gap-2 mb-3" style={{ fontFamily: 'Outfit, sans-serif' }}>
+          <Search className="w-5 h-5 text-[#1D4ED8]" />
           Track Your Application / Grievance
         </h2>
-        <p className="text-xs text-slate-505 dark:text-slate-400 mb-4">
-          Enter your 12-character Ticket ID (e.g. <span className="font-mono font-bold">REQ-2026-982739</span>) to review real-time progress dispatches.
+        <p className="text-xs text-gray-500 mb-4">
+          Enter your 12-character Ticket ID (e.g. <span className="font-mono font-bold text-[#1D4ED8]">REQ-2026-982739</span>) to review real-time progress dispatches.
         </p>
 
         <form onSubmit={handleSearchSubmit} className="flex gap-2">
           <input
             type="text"
-            placeholder="Enter Request Ref ID"
+            placeholder="Enter Request Ref ID (e.g. REQ-2026-XXXXXX)"
             value={searchId}
             onChange={(e) => setSearchId(e.target.value)}
-            className="flex-1 px-4 py-2.5 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-xs focus:outline-none focus:border-[#EA580C] text-slate-800 dark:text-slate-100 font-bold"
+            className="flex-1 gov-input font-bold"
             required
           />
           <button
             type="submit"
             disabled={searching}
-            className="px-6 py-2.5 bg-[#EA580C] text-white rounded-xl text-xs font-bold hover:bg-orange-700 transition flex items-center gap-1"
+            className="btn-primary px-6"
           >
             {searching ? <RefreshCw className="w-3.5 h-3.5 animate-spin" /> : 'Search'}
           </button>
         </form>
 
         {errorMsg && (
-          <div className="mt-3.5 p-3 rounded-xl bg-red-50 dark:bg-red-950/20 border border-red-200 dark:border-red-900/40 text-red-650 dark:text-red-400 text-xs font-bold flex items-center gap-1.5">
+          <div className="mt-3.5 p-3 rounded-xl bg-red-50 border border-red-200 text-red-700 text-xs font-bold flex items-center gap-1.5 animate-fade-in">
             <AlertTriangle className="w-4 h-4 shrink-0" />
             <span>{errorMsg}</span>
           </div>
@@ -151,69 +150,64 @@ export const ComplaintTracking = () => {
 
       {/* Ticket Details Timeline */}
       {ticketDetails && (
-        <div className="p-6 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl space-y-6 shadow-sm">
+        <div className="gov-card p-6 space-y-6 animate-fade-in">
           
           {/* Header row */}
-          <div className="flex justify-between items-start border-b border-slate-200 dark:border-slate-800 pb-3">
+          <div className="flex justify-between items-start border-b border-gray-150 pb-3 flex-wrap gap-2">
             <div>
-              <div className="flex items-center gap-2">
-                <span className="font-extrabold text-sm text-slate-900 dark:text-white font-mono">{ticketDetails.requestId}</span>
-                <span className={`px-2 py-0.5 rounded text-[9px] font-black uppercase ${
-                  ticketDetails.status === 'Completed' ? 'bg-emerald-100 dark:bg-emerald-950/40 text-emerald-600 dark:text-emerald-300' :
-                  ticketDetails.status === 'In-Progress' ? 'bg-orange-100 dark:bg-blue-900/40 text-[#EA580C] dark:text-orange-300' :
-                  ticketDetails.status === 'Rejected' ? 'bg-red-100 dark:bg-red-950/40 text-red-650 dark:text-red-300' :
-                  'bg-amber-100 dark:bg-amber-900/40 text-amber-600 dark:text-amber-300'
-                }`}>{ticketDetails.status}</span>
+              <div className="flex items-center gap-2 flex-wrap">
+                <span className="font-extrabold text-sm text-gray-900 font-mono">{ticketDetails.requestId}</span>
+                <span className={statusBadge(ticketDetails.status)}>{ticketDetails.status}</span>
               </div>
-              <p className="text-[10px] text-slate-400 mt-1">Category: <span className="capitalize font-bold text-slate-500">{ticketDetails.serviceType} ({ticketDetails.subService})</span></p>
+              <p className="text-[10px] text-gray-400 mt-1 capitalize font-medium">Category: <span className="font-bold text-gray-700">{ticketDetails.serviceType} ({ticketDetails.subService})</span></p>
             </div>
-            <div className="text-right text-[10px] text-slate-400 font-mono">
-              Filed: {new Date(ticketDetails.createdAt).toLocaleDateString()}
+            <div className="text-right text-[10px] text-gray-400 font-mono">
+              Filed: {new Date(ticketDetails.createdAt).toLocaleDateString('en-IN')}
             </div>
           </div>
 
           {/* Description details */}
-          <div className="space-y-1 text-xs">
-            <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">Description Details</span>
-            <p className="p-3 bg-slate-50 dark:bg-slate-850 rounded-lg text-slate-650 dark:text-slate-350 leading-relaxed border border-slate-200/50 dark:border-slate-800">
+          <div className="space-y-1.5 text-xs">
+            <span className="section-label text-gray-500 block">Description Details</span>
+            <p className="p-3.5 bg-gray-50 rounded-xl text-gray-600 leading-relaxed border border-gray-100 italic">
               "{ticketDetails.description}"
             </p>
           </div>
 
           {/* Vertical Timelines */}
           <div className="space-y-4 pt-1 text-xs">
-            <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">Application Status Timeline</span>
+            <span className="section-label text-gray-500 block">Application Status Timeline</span>
 
-            <div className="relative border-l border-slate-200 dark:border-slate-800 ml-2 pl-5 space-y-6 text-xs">
+            <div className="relative border-l border-gray-200 ml-2 pl-5 space-y-6 text-xs">
               
               {/* Step 1: Submitted */}
-              <div className="relative">
-                <span className="absolute -left-[24px] top-0 w-3 h-3 rounded-full bg-[#16A34A] border-2 border-white dark:border-slate-900"></span>
+              <div className="relative flex gap-3">
+                <span className="absolute -left-[26px] top-0.5 w-3 h-3 rounded-full bg-green-500 border-2 border-white"></span>
                 <div>
-                  <h5 className="font-bold text-slate-800 dark:text-white">Request Registered</h5>
-                  <p className="text-[10px] text-slate-400 mt-0.5">Ticket submitted to the {ticketDetails.assignedDepartment} registry.</p>
+                  <h5 className="font-bold text-gray-800">Request Registered</h5>
+                  <p className="text-[10px] text-gray-500 mt-0.5">Ticket submitted to the {ticketDetails.assignedDepartment} registry.</p>
                 </div>
               </div>
 
               {/* Step 2: Under Review */}
-              <div className="relative">
-                <span className={`absolute -left-[24px] top-0 w-3 h-3 rounded-full border-2 border-white dark:border-slate-900 ${
-                  getStepIndex(ticketDetails.status) >= 2 ? 'bg-[#16A34A]' : 'bg-slate-300'
+              <div className="relative flex gap-3">
+                <span className={`absolute -left-[26px] top-0.5 w-3 h-3 rounded-full border-2 border-white ${
+                  getStepIndex(ticketDetails.status) >= 2 ? 'bg-green-500' : 'bg-gray-300'
                 }`}></span>
                 <div>
-                  <h5 className="font-bold text-slate-800 dark:text-white">Department Processing Wing</h5>
-                  <p className="text-[10px] text-slate-405 mt-0.5">{ticketDetails.assignedDepartment}</p>
+                  <h5 className="font-bold text-gray-800">Department Processing Wing</h5>
+                  <p className="text-[10px] text-gray-500 mt-0.5">{ticketDetails.assignedDepartment}</p>
                 </div>
               </div>
 
               {/* Step 3: Team Assigned */}
-              <div className="relative">
-                <span className={`absolute -left-[24px] top-0 w-3 h-3 rounded-full border-2 border-white dark:border-slate-900 ${
-                  ticketDetails.assignedTeam && ticketDetails.assignedTeam !== 'Unassigned' ? 'bg-[#16A34A]' : 'bg-slate-300'
+              <div className="relative flex gap-3">
+                <span className={`absolute -left-[26px] top-0.5 w-3 h-3 rounded-full border-2 border-white ${
+                  ticketDetails.assignedTeam && ticketDetails.assignedTeam !== 'Unassigned' ? 'bg-green-500' : 'bg-gray-300'
                 }`}></span>
                 <div>
-                  <h5 className="font-bold text-slate-800 dark:text-white">Field Maintenance Crew Dispatch</h5>
-                  <p className="text-[10px] text-slate-500 font-semibold mt-0.5">
+                  <h5 className="font-bold text-gray-800">Field Maintenance Crew Dispatch</h5>
+                  <p className="text-[10px] text-gray-500 font-semibold mt-0.5">
                     {ticketDetails.assignedTeam && ticketDetails.assignedTeam !== 'Unassigned' 
                       ? `Crew Assigned: ${ticketDetails.assignedTeam}` 
                       : 'Under dispatch allocation review'
@@ -224,24 +218,24 @@ export const ComplaintTracking = () => {
 
               {/* Step 4: Remarks */}
               {ticketDetails.remarks && (
-                <div className="relative">
-                  <span className="absolute -left-[24px] top-0 w-3 h-3 rounded-full bg-[#16A34A] border-2 border-white dark:border-slate-900"></span>
-                  <div className="p-3 bg-orange-50/50 dark:bg-slate-850 border border-orange-100/50 dark:border-orange-900/10 rounded-xl">
-                    <h5 className="font-bold text-[#EA580C] dark:text-orange-400">Official remarks Comments</h5>
-                    <p className="text-[10px] text-slate-650 dark:text-slate-350 font-bold mt-0.5">"{ticketDetails.remarks}"</p>
+                <div className="relative flex gap-3">
+                  <span className="absolute -left-[26px] top-0.5 w-3 h-3 rounded-full bg-green-500 border-2 border-white"></span>
+                  <div className="p-3 bg-blue-50 border border-blue-100 rounded-xl w-full">
+                    <h5 className="font-bold text-[#1D4ED8]">Official Status Remarks</h5>
+                    <p className="text-[10px] text-gray-700 font-bold mt-0.5">"{ticketDetails.remarks}"</p>
                   </div>
                 </div>
               )}
 
               {/* Step 5: Resolution */}
-              <div className="relative">
-                <span className={`absolute -left-[24px] top-0 w-3 h-3 rounded-full border-2 border-white dark:border-slate-900 ${
-                  ticketDetails.status === 'Completed' ? 'bg-[#16A34A]' :
-                  ticketDetails.status === 'Rejected' ? 'bg-red-500' : 'bg-slate-300'
+              <div className="relative flex gap-3">
+                <span className={`absolute -left-[26px] top-0.5 w-3 h-3 rounded-full border-2 border-white ${
+                  ticketDetails.status === 'Completed' ? 'bg-green-500' :
+                  ticketDetails.status === 'Rejected' ? 'bg-red-500' : 'bg-gray-300'
                 }`}></span>
                 <div>
-                  <h5 className="font-bold text-slate-800 dark:text-white">Resolution & Closure</h5>
-                  <p className="text-[10px] text-slate-400 mt-0.5">
+                  <h5 className="font-bold text-gray-800">Resolution & Closure</h5>
+                  <p className="text-[10px] text-gray-500 mt-0.5">
                     {ticketDetails.status === 'Completed' ? 'Grievance resolved and connection ticket closed.' :
                      ticketDetails.status === 'Rejected' ? 'Ticket rejected / closed.' :
                      'Pending final resolution logs'
