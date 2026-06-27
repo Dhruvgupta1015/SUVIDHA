@@ -2,10 +2,77 @@
 @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Outfit:wght@300;400;500;600;700;800&display=swap');
 @config "../tailwind.config.js";
 
+:root {
+  --color-kiosk-dark: #f8fafc;
+  --color-kiosk-navy: #ffffff;
+  --color-kiosk-accent: #f1f5f9;
+  --color-kiosk-teal: #0284c7;
+  --color-kiosk-mint: #059669;
+  --color-kiosk-gold: #d97706;
+  --color-kiosk-crimson: #dc2626;
+
+  --color-slate-100: #0f172a;
+  --color-slate-200: #1e293b;
+  --color-slate-300: #334155;
+  --color-slate-400: #475569;
+  --color-slate-500: #64748b;
+  --color-slate-600: #cbd5e1;
+  --color-white: #0f172a;
+
+  --color-border-opacity: rgba(15, 23, 42, 0.08);
+  --color-glass-bg: rgba(255, 255, 255, 0.85);
+  --color-glass-border: rgba(15, 23, 42, 0.08);
+}
+
+.light {
+  --color-kiosk-dark: #f8fafc;
+  --color-kiosk-navy: #ffffff;
+  --color-kiosk-accent: #f1f5f9;
+  --color-kiosk-teal: #0284c7;
+  --color-kiosk-mint: #059669;
+  --color-kiosk-gold: #d97706;
+  --color-kiosk-crimson: #dc2626;
+
+  --color-slate-100: #0f172a;
+  --color-slate-200: #1e293b;
+  --color-slate-300: #334155;
+  --color-slate-400: #475569;
+  --color-slate-500: #64748b;
+  --color-slate-600: #cbd5e1;
+  --color-white: #0f172a;
+
+  --color-border-opacity: rgba(15, 23, 42, 0.08);
+  --color-glass-bg: rgba(255, 255, 255, 0.85);
+  --color-glass-border: rgba(15, 23, 42, 0.08);
+}
+
+.dark {
+  --color-kiosk-dark: #0a0f1d;
+  --color-kiosk-navy: #151e36;
+  --color-kiosk-accent: #233256;
+  --color-kiosk-teal: #0df5e3;
+  --color-kiosk-mint: #10b981;
+  --color-kiosk-gold: #eab308;
+  --color-kiosk-crimson: #ef4444;
+
+  --color-slate-100: #f1f5f9;
+  --color-slate-200: #e2e8f0;
+  --color-slate-300: #cbd5e1;
+  --color-slate-400: #94a3b8;
+  --color-slate-500: #64748b;
+  --color-slate-600: #475569;
+  --color-white: #ffffff;
+
+  --color-border-opacity: rgba(255, 255, 255, 0.05);
+  --color-glass-bg: rgba(255, 255, 255, 0.06);
+  --color-glass-border: rgba(255, 255, 255, 0.12);
+}
+
 @layer base {
   body {
     @apply bg-kiosk-dark text-slate-100 font-sans antialiased overflow-x-hidden select-none min-h-screen;
     touch-action: manipulation;
+    transition: background-color 0.3s ease, color 0.3s ease;
   }
 
   #root {
@@ -21,10 +88,10 @@
 
 @layer utilities {
   .glassmorphism {
-    background: rgba(255, 255, 255, 0.06);
+    background: var(--color-glass-bg);
     backdrop-filter: blur(12px);
     -webkit-backdrop-filter: blur(12px);
-    border: 1px solid rgba(255, 255, 255, 0.12);
+    border: 1px solid var(--color-glass-border);
   }
   
   .glassmorphism-dark {

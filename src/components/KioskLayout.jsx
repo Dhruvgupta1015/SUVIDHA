@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { useLanguage } from '../context/LanguageContext';
 import { useAccessibility } from '../context/AccessibilityContext';
+import { useTheme } from '../context/ThemeContext';
 import { LanguageSelector } from './LanguageSelector';
 import { AccessibilityPanel } from './AccessibilityPanel';
 import { VoiceWidget } from './VoiceWidget';
@@ -12,12 +13,15 @@ import {
   Wifi, 
   Clock, 
   MapPin,
-  HelpCircle
+  HelpCircle,
+  Sun,
+  Moon
 } from 'lucide-react';
 
 export const KioskLayout = ({ children }) => {
   const { t, language } = useLanguage();
   const { highContrast, voiceNav, speakElement } = useAccessibility();
+  const { theme, toggleTheme } = useTheme();
   const location = useLocation();
   const navigate = useNavigate();
 
@@ -87,6 +91,19 @@ export const KioskLayout = ({ children }) => {
 
           {/* System Control Widgets */}
           <div className="flex items-center gap-3">
+            <button
+              onClick={toggleTheme}
+              className={`p-2.5 rounded-xl border transition-all duration-300 kiosk-btn ${
+                highContrast
+                  ? 'border-yellow-400 text-yellow-400'
+                  : 'bg-white/5 border-white/10 text-slate-300 hover:bg-white/10 hover:border-kiosk-teal/30'
+              }`}
+              title="Toggle Light/Dark Theme"
+              aria-label="Toggle Light/Dark Theme"
+              onMouseEnter={(e) => speakElement(e, `Toggle ${theme === 'dark' ? 'Light' : 'Dark'} Mode`)}
+            >
+              {theme === 'dark' ? <Sun className="w-4 h-4 text-amber-400" /> : <Moon className="w-4 h-4 text-indigo-500" />}
+            </button>
             <LanguageSelector />
             <AccessibilityPanel />
           </div>

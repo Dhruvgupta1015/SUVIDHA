@@ -25,38 +25,42 @@ import Gas from './pages/Gas';
 import Waste from './pages/Waste';
 import ComplaintRegister from './pages/ComplaintRegister';
 
+import { ThemeProvider } from './context/ThemeContext';
+
 function App() {
   return (
-    <Router>
-      <LanguageProvider>
-        <AccessibilityProvider>
-          <VoiceAssistantProvider>
-            <KioskLayout>
-              <Routes>
-                <Route path="/" element={<Home />} />
-                <Route path="/auth" element={<Auth />} />
-                <Route path="/services" element={<ServiceDashboard />} />
-                <Route path="/ai-assistant" element={<AIAssistant />} />
-                <Route path="/upload" element={<DocumentUpload />} />
-                <Route path="/submit" element={<SubmitRequest />} />
-                <Route path="/track" element={<ComplaintTracking />} />
-                <Route path="/receipt" element={<ReceiptPage />} />
-                <Route path="/admin" element={<AdminDashboard />} />
-                <Route path="/mobile" element={<MobileCompanion />} />
-                <Route path="/demo" element={<DemoCenter />} />
-                <Route path="/multiverse" element={<MultiverseVisualizer />} />
-                <Route path="/presentation" element={<Presentation />} />
-                <Route path="/electricity" element={<Electricity />} />
-                <Route path="/water" element={<Water />} />
-                <Route path="/gas" element={<Gas />} />
-                <Route path="/waste" element={<Waste />} />
-                <Route path="/complaints" element={<ComplaintRegister />} />
-              </Routes>
-            </KioskLayout>
-          </VoiceAssistantProvider>
-        </AccessibilityProvider>
-      </LanguageProvider>
-    </Router>
+    <ThemeProvider>
+      <Router>
+        <LanguageProvider>
+          <AccessibilityProvider>
+            <VoiceAssistantProvider>
+              <KioskLayout>
+                <Routes>
+                  <Route path="/" element={<Home />} />
+                  <Route path="/auth" element={<Auth />} />
+                  <Route path="/services" element={<ServiceDashboard />} />
+                  <Route path="/ai-assistant" element={<AIAssistant />} />
+                  <Route path="/upload" element={<DocumentUpload />} />
+                  <Route path="/submit" element={<SubmitRequest />} />
+                  <Route path="/track" element={<ComplaintTracking />} />
+                  <Route path="/receipt" element={<ReceiptPage />} />
+                  <Route path="/admin" element={<AdminDashboard />} />
+                  <Route path="/mobile" element={<MobileCompanion />} />
+                  <Route path="/demo" element={<DemoCenter />} />
+                  <Route path="/multiverse" element={<MultiverseVisualizer />} />
+                  <Route path="/presentation" element={<Presentation />} />
+                  <Route path="/electricity" element={<Electricity />} />
+                  <Route path="/water" element={<Water />} />
+                  <Route path="/gas" element={<Gas />} />
+                  <Route path="/waste" element={<Waste />} />
+                  <Route path="/complaints" element={<ComplaintRegister />} />
+                </Routes>
+              </KioskLayout>
+            </VoiceAssistantProvider>
+          </AccessibilityProvider>
+        </LanguageProvider>
+      </Router>
+    </ThemeProvider>
   );
 }
 

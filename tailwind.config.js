@@ -7,6 +7,15 @@ export default {
   theme: {
     extend: {
       colors: {
+        white: 'var(--color-white)',
+        slate: {
+          100: 'var(--color-slate-100)',
+          200: 'var(--color-slate-200)',
+          300: 'var(--color-slate-300)',
+          400: 'var(--color-slate-400)',
+          500: 'var(--color-slate-500)',
+          600: 'var(--color-slate-600)',
+        },
         brand: {
           50: '#f0f7ff',
           100: '#e0effe',
@@ -21,13 +30,13 @@ export default {
           950: '#082949',
         },
         kiosk: {
-          dark: '#0a0f1d',
-          navy: '#151e36',
-          accent: '#233256',
-          teal: '#0df5e3',
-          mint: '#10b981',
-          gold: '#eab308',
-          crimson: '#ef4444',
+          dark: 'var(--color-kiosk-dark)',
+          navy: 'var(--color-kiosk-navy)',
+          accent: 'var(--color-kiosk-accent)',
+          teal: 'var(--color-kiosk-teal)',
+          mint: 'var(--color-kiosk-mint)',
+          gold: 'var(--color-kiosk-gold)',
+          crimson: 'var(--color-kiosk-crimson)',
         }
       },
       fontFamily: {
