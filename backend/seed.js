@@ -2,129 +2,169 @@ import mongoose from 'mongoose';
 import dotenv from 'dotenv';
 import User from './models/User.js';
 import Request from './models/Request.js';
-import Complaint from './models/Complaint.js';
 
 dotenv.config();
 
 const mongoUri = process.env.MONGO_URI || 'mongodb://localhost:27017/suvidha';
 
-const seedScenarios = async () => {
+const seedData = async () => {
   try {
     console.log(`Connecting to MongoDB for seeding: ${mongoUri}`);
     await mongoose.connect(mongoUri);
-    console.log('Connected! Dropping existing citizen records...');
+    console.log('Connected! Dropping existing records...');
 
     // Clear old data
     await User.deleteMany();
     await Request.deleteMany();
-    await Complaint.deleteMany();
 
-    console.log('Seeding 5 realistic Snapdragon Multiverse Kiosk scenarios...');
+    console.log('Seeding government-grade portal records...');
 
-    // Scenario 1: New Electricity Connection
-    const user1 = await User.create({ name: "Amit Kumar", mobile: "9876543210", aadhaar: "982138294819", role: "citizen" });
-    const request1 = await Request.create({
+    // 1. Seed Super Admin
+    const admin = await User.create({
+      name: "Chief Admin Commissioner",
+      email: "admin@suvidha.gov.in",
+      password: "admin123",
+      role: "admin",
+      department: "General Administration"
+    });
+    console.log(`Seeded Admin: ${admin.email}`);
+
+    // 2. Seed Departmental Officers
+    const officers = [
+      {
+        name: "Amit Shah (EE)",
+        email: "officer.elec@suvidha.gov.in",
+        password: "officer123",
+        role: "officer",
+        department: "Electricity Department"
+      },
+      {
+        name: "S. Krishnan (BWSSB)",
+        email: "officer.water@suvidha.gov.in",
+        password: "officer123",
+        role: "officer",
+        department: "Water Department"
+      },
+      {
+        name: "Ramanathan K. (GAIL)",
+        email: "officer.gas@suvidha.gov.in",
+        password: "officer123",
+        role: "officer",
+        department: "Gas Department"
+      },
+      {
+        name: "Vikram Seth (BBMP)",
+        email: "officer.waste@suvidha.gov.in",
+        password: "officer123",
+        role: "officer",
+        department: "Waste Management"
+      },
+      {
+        name: "Priyanka Sen (Nodal Officer)",
+        email: "officer.gen@suvidha.gov.in",
+        password: "officer123",
+        role: "officer",
+        department: "General Administration"
+      }
+    ];
+
+    for (const off of officers) {
+      await User.create(off);
+      console.log(`Seeded Officer: ${off.email} (${off.department})`);
+    }
+
+    // 3. Seed Citizens
+    const citizen1 = await User.create({ name: "Amit Kumar", mobile: "9876543210", aadhaar: "982138294819", role: "citizen" });
+    const citizen2 = await User.create({ name: "Saraswathi N.", mobile: "9876543211", aadhaar: "103948294810", role: "citizen" });
+    const citizen3 = await User.create({ name: "Leela Devi", mobile: "9876543212", aadhaar: "482910293849", role: "citizen" });
+    const citizen4 = await User.create({ name: "Vikram Seth", mobile: "9876543213", aadhaar: "302948392019", role: "citizen" });
+    const citizen5 = await User.create({ name: "Priyanka Sen", mobile: "9876543214", aadhaar: "784019203849", role: "citizen" });
+    console.log("Seeded 5 Citizens.");
+
+    // 4. Seed Requests/Grievances
+    const r1 = await Request.create({
       requestId: "REQ-2026-982739",
-      citizenId: user1._id,
+      citizenId: citizen1._id,
       serviceType: "electricity",
+      subService: "New Connection Request",
+      description: "Request for new residential electric meter connection at Plot 45, 12th Main Road, HAL Stage 2.",
       status: "Pending",
-      assignedDepartment: "BESCOM Indiranagar Sub-division Office",
+      assignedDepartment: "Electricity Department",
+      priority: "Standard",
       documents: [
-        { name: "Identity Proof", path: "/uploads/idProof-amit.pdf", verified: true, confidence: 0.98 },
-        { name: "Land Sale Deed", path: "/uploads/landDeed-amit.pdf", verified: true, confidence: 0.96 }
+        { name: "Identity Proof", path: "/uploads/mock_id.pdf", verified: true, confidence: 0.98 },
+        { name: "Land Sale Deed", path: "/uploads/mock_land.pdf", verified: true, confidence: 0.96 }
       ]
     });
-    await Complaint.create({
-      requestId: request1._id,
-      complaintType: "New Connection",
-      description: "Request for new residential connection at Plot 45, 12th Main Road, HAL Stage 2.",
-      priority: "Standard"
-    });
 
-    // Scenario 2: Water Leakage Complaint
-    const user2 = await User.create({ name: "Saraswathi N.", mobile: "9876543211", aadhaar: "103948294810", role: "citizen" });
-    const request2 = await Request.create({
+    const r2 = await Request.create({
       requestId: "REQ-2026-103948",
-      citizenId: user2._id,
+      citizenId: citizen2._id,
       serviceType: "water",
-      status: "In-Progress",
-      assignedDepartment: "BWSSB Water Grid Nodal Wing Ward 84",
-      documents: [
-        { name: "Identity Proof", path: "/uploads/idProof-sara.pdf", verified: true, confidence: 0.99 },
-        { name: "Water Bill Copy", path: "/uploads/waterBill-sara.pdf", verified: true, confidence: 0.94 }
-      ]
-    });
-    await Complaint.create({
-      requestId: request2._id,
-      complaintType: "Leakage Complaint",
+      subService: "Mainline Leakage Complaint",
       description: "Major water main pipe leak observed outside Indiranagar Metro Station. Gallons of water wasting.",
-      priority: "High"
+      status: "In-Progress",
+      assignedDepartment: "Water Department",
+      assignedTeam: "BWSSB Water Grid Repair Crew Alpha",
+      remarks: "Excavation and line checking started near Metro Pillar 84.",
+      priority: "High",
+      documents: [
+        { name: "Identity Proof", path: "/uploads/mock_id.pdf", verified: true, confidence: 0.99 },
+        { name: "Water Bill Copy", path: "/uploads/mock_bill.pdf", verified: true, confidence: 0.94 }
+      ]
     });
 
-    // Scenario 3: Gas Maintenance Request
-    const user3 = await User.create({ name: "Leela Devi", mobile: "9876543212", aadhaar: "482910293849", role: "citizen" });
-    const request3 = await Request.create({
+    const r3 = await Request.create({
       requestId: "REQ-2026-482910",
-      citizenId: user3._id,
+      citizenId: citizen3._id,
       serviceType: "gas",
-      status: "Escalated",
-      assignedDepartment: "GAIL Gas Emergency Division",
-      documents: [
-        { name: "Identity Proof", path: "/uploads/idProof-leela.pdf", verified: true, confidence: 0.97 },
-        { name: "Gas Agreement", path: "/uploads/gasAgreement-leela.pdf", verified: true, confidence: 0.95 }
-      ]
-    });
-    await Complaint.create({
-      requestId: request3._id,
-      complaintType: "Maintenance Request",
+      subService: "PNG Meter Repair",
       description: "Slight smell of gas near the PNG meter valve inside kitchen. Urgently request safety inspection.",
-      priority: "Critical"
-    });
-
-    // Scenario 4: Waste Collection Complaint
-    const user4 = await User.create({ name: "Vikram Seth", mobile: "9876543213", aadhaar: "302948392019", role: "citizen" });
-    const request4 = await Request.create({
-      requestId: "REQ-2026-302948",
-      citizenId: user4._id,
-      serviceType: "waste",
-      status: "Completed",
-      assignedDepartment: "BBMP Solid Waste Cell Ward 84",
-      documents: [
-        { name: "Identity Proof", path: "/uploads/idProof-vikram.pdf", verified: true, confidence: 0.95 }
-      ]
-    });
-    await Complaint.create({
-      requestId: request4._id,
-      complaintType: "Garbage Collection Issue",
-      description: "Garbage collector vehicle has not visited 4th Cross Lane for 3 consecutive days. Trash piles building up.",
-      priority: "Standard"
-    });
-
-    // Scenario 5: Streetlight not working complaint
-    const user5 = await User.create({ name: "Priyanka Sen", mobile: "9876543214", aadhaar: "784019203849", role: "citizen" });
-    const request5 = await Request.create({
-      requestId: "REQ-2026-784019",
-      citizenId: user5._id,
-      serviceType: "general",
       status: "Pending",
-      assignedDepartment: "BBMP Streetlight Cell",
+      assignedDepartment: "Gas Department",
+      priority: "Critical",
       documents: [
-        { name: "Identity Proof", path: "/uploads/idProof-priya.pdf", verified: true, confidence: 0.96 }
+        { name: "Identity Proof", path: "/uploads/mock_id.pdf", verified: true, confidence: 0.97 }
       ]
     });
-    await Complaint.create({
-      requestId: request5._id,
-      complaintType: "Streetlight issue",
-      description: "Streetlight pole SL-048 outside HAL Stage 2 block is offline. Lane is completely dark and unsafe at night.",
-      priority: "High"
+
+    const r4 = await Request.create({
+      requestId: "REQ-2026-302948",
+      citizenId: citizen4._id,
+      serviceType: "waste",
+      subService: "Garbage Pile Removal",
+      description: "Garbage collector vehicle has not visited 4th Cross Lane for 3 consecutive days. Trash piles building up.",
+      status: "Completed",
+      assignedDepartment: "Waste Management",
+      assignedTeam: "BBMP Solid Waste Truck Route 4",
+      remarks: "Debris cleared, trash collected, area washed and sanitized.",
+      priority: "Standard",
+      documents: [
+        { name: "Identity Proof", path: "/uploads/mock_id.pdf", verified: true, confidence: 0.95 }
+      ]
     });
 
-    console.log('Seeding complete! 5 scenarios successfully seeded to MongoDB.');
+    const r5 = await Request.create({
+      requestId: "REQ-2026-784019",
+      citizenId: citizen5._id,
+      serviceType: "general",
+      subService: "Streetlight Malfunction",
+      description: "Streetlight pole SL-048 outside HAL Stage 2 block is offline. Lane is completely dark and unsafe at night.",
+      status: "Pending",
+      assignedDepartment: "General Administration",
+      priority: "High",
+      documents: [
+        { name: "Identity Proof", path: "/uploads/mock_id.pdf", verified: true, confidence: 0.96 }
+      ]
+    });
+
+    console.log("Seeded 5 Civic Request/Grievance Tickets.");
+    console.log("Database seeding completed successfully.");
     mongoose.connection.close();
   } catch (error) {
-    console.error(`Error during seeding: ${error.message}`);
+    console.error(`Error during database seeding: ${error.message}`);
     process.exit(1);
   }
 };
 
-seedScenarios();
+seedData();

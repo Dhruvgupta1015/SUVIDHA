@@ -12,7 +12,6 @@ import connectDB from './config/db.js';
 // Route Imports
 import authRoutes from './routes/authRoutes.js';
 import requestRoutes from './routes/requestRoutes.js';
-import complaintRoutes from './routes/complaintRoutes.js';
 import adminRoutes from './routes/adminRoutes.js';
 import uploadRoutes from './routes/uploadRoutes.js';
 
@@ -51,7 +50,6 @@ app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
 // Mount API Routers
 app.use('/api/auth', authRoutes);
 app.use('/api/requests', requestRoutes);
-app.use('/api/complaints', complaintRoutes);
 app.use('/api/admin', adminRoutes);
 app.use('/api/upload', uploadRoutes);
 

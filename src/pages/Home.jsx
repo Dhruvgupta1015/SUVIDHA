@@ -1,203 +1,300 @@
-import React, { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
+import React, { useState } from 'react';
+import { useNavigate, Link } from 'react-router-dom';
 import { useLanguage } from '../context/LanguageContext';
 import { useAccessibility } from '../context/AccessibilityContext';
-import { useVoiceAssistant } from '../context/VoiceAssistantContext';
-import { 
-  Zap, 
-  Droplet, 
-  Flame, 
-  FileText, 
-  Play, 
-  Mic, 
-  ChevronRight,
-  Bot,
-  HelpCircle,
-  Clock
+import {
+  ArrowRight, Users, ShieldCheck, Building, Search, Phone, FileCheck,
+  Activity, Clock, MapPin, CheckCircle2, Zap, Droplet, Flame, Trash2, FileText, AlertCircle
 } from 'lucide-react';
+import { requestAPI } from '../utils/api';
 
 export const Home = () => {
   const navigate = useNavigate();
   const { t } = useLanguage();
-  const { speakElement, speak, highContrast } = useAccessibility();
-  const { setIsChatOpen, startListening } = useVoiceAssistant();
+  const { speakElement, speak } = useAccessibility();
 
-  // Clear session variables on mount to protect user privacy on public terminal
-  useEffect(() => {
-    localStorage.clear();
-    console.log("[Kiosk Security] Local storage session caches cleared");
-  }, []);
+  const [searchId, setSearchId] = useState('');
+  const [trackResult, setTrackResult] = useState(null);
+  const [trackError, setTrackError] = useState('');
+  const [searching, setSearching] = useState(false);
 
-  // Highlight state for cards
-  const [activeCard, setActiveCard] = useState(null);
-
-  // The 4 requested service cards
-  const services = [
-    {
-      id: "electricity",
-      title: "Electricity Services",
-      subtitle: "Department of Power Distribution",
-      path: "/electricity",
-      icon: Zap,
-      color: "from-amber-400 to-yellow-600 bg-amber-500/10 border-amber-500/20 text-amber-400 hover:border-amber-400/50",
-      description: "Pay bills, report power outages, or report meter issues."
-    },
-    {
-      id: "water",
-      title: "Water Services",
-      subtitle: "Water Supply & Sewerage Board",
-      path: "/water",
-      icon: Droplet,
-      color: "from-blue-400 to-sky-600 bg-blue-500/10 border-blue-500/20 text-blue-400 hover:border-blue-400/50",
-      description: "Report leakages, check water bills, or raise supply issues."
-    },
-    {
-      id: "gas",
-      title: "Gas Services",
-      subtitle: "Piped Natural Gas (PNG) Grid",
-      path: "/gas",
-      icon: Flame,
-      color: "from-orange-500 to-red-600 bg-orange-500/10 border-orange-500/20 text-orange-400 hover:border-orange-400/50",
-      description: "Report gas leakages, check billing, or apply for repairs."
-    },
-    {
-      id: "complaints",
-      title: "Complaint Services",
-      subtitle: "Public Grievance Redressal Cell",
-      path: "/complaints",
-      icon: FileText,
-      color: "from-indigo-400 to-violet-600 bg-indigo-500/10 border-indigo-500/20 text-indigo-400 hover:border-indigo-400/50",
-      description: "Register general complaints about potholes, streetlights, etc."
+  const handleSearchSubmit = async (e) => {
+    e.preventDefault();
+    if (!searchId.trim()) return;
+    setSearching(true);
+    setTrackError('');
+    setTrackResult(null);
+    try {
+      const response = await requestAPI.getById(searchId.trim());
+      setSearching(false);
+      if (response.data && response.data.request) {
+        setTrackResult(response.data.request);
+      } else {
+        setTrackError('Ticket ID not found. Use format: REQ-2026-XXXXXX');
+      }
+    } catch {
+      setSearching(false);
+      setTrackError('Ticket ID not found. Use format: REQ-2026-XXXXXX');
     }
+  };
+
+  const services = [
+    { id: 'electricity', title: 'Electricity Connection', hi: 'बिजली कनेक्शन', sla: '48 Hrs', icon: <Zap className="w-5 h-5 text-[#EA580C]" />, desc: 'Apply for residential/commercial new meters or report power failures.' },
+    { id: 'water', title: 'Water Connection', hi: 'पानी कनेक्शन', sla: '24 Hrs', icon: <Droplet className="w-5 h-5 text-[#EA580C]" />, desc: 'Register pipe leaks or apply for municipal water supply lines.' },
+    { id: 'gas', title: 'PNG Gas Connection', hi: 'पीएनजी गैस', sla: '48 Hrs', icon: <Flame className="w-5 h-5 text-[#EA580C]" />, desc: 'Inspect PNG gas lines, repair meters, or register pressure issues.' },
+    { id: 'waste', title: 'Waste Management', hi: 'कचरा प्रबंधन', sla: '24 Hrs', icon: <Trash2 className="w-5 h-5 text-[#EA580C]" />, desc: 'Report missed trash bins, debris pileups, or sewage clogs.' },
+    { id: 'general', title: 'General Complaints', hi: 'सामान्य शिकायतें', sla: '72 Hrs', icon: <FileText className="w-5 h-5 text-[#EA580C]" />, desc: 'Submit streetlight failures, potholes, or stray animal reports.' },
   ];
 
-  const handleCardClick = (path, titleText, e) => {
-    speakElement(e, `Opening ${titleText}`);
-    navigate(path);
-  };
+  const steps = [
+    { n: '01', title: 'Sign In Securely', desc: 'Login via mobile OTP. Documents upload directly to verification registry.' },
+    { n: '02', title: 'Submit Application', desc: 'Select category, describe issue, set priority, and attach documents.' },
+    { n: '03', title: 'Officer Verification', desc: 'Officers verify, assign field crews, and add official dispatch logs.' },
+    { n: '04', title: 'SLA Resolution', desc: 'Get closure notification and download digital verification receipts.' },
+  ];
 
-  const handleStartService = (e) => {
-    speakElement(e, "Starting general citizen verification. Redirecting to OTP Login.");
-    navigate('/auth');
-  };
-
-  const handleTalkToAI = (e) => {
-    speakElement(e, "Opening AI Voice Assistant.");
-    setIsChatOpen(true);
-    setTimeout(() => {
-      startListening();
-    }, 400);
+  const statusColors = {
+    Completed: 'bg-green-100 text-green-700',
+    'In-Progress': 'bg-orange-100 text-orange-700',
+    Rejected: 'bg-red-100 text-red-700',
+    Pending: 'bg-yellow-100 text-yellow-700',
   };
 
   return (
-    <div className="flex-1 flex flex-col justify-between py-2 max-w-6xl mx-auto w-full">
-      
-      {/* 1. Kiosk Welcome Hero Unit */}
-      <div className="text-center py-6 space-y-3.5">
-        <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-white/5 border border-white/10 text-xs font-mono text-kiosk-teal select-none">
-          <Clock className="w-3.5 h-3.5 animate-pulse" />
-          <span>Kiosk Indiranagar metro station is fully online</span>
+    <div className="flex flex-col gap-12 pb-8">
+
+      {/* ── Hero ── */}
+      <section className="bg-white border border-gray-200 rounded-2xl p-8 md:p-14 shadow-sm text-center">
+        <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-wider bg-orange-50 text-[#EA580C] border border-orange-200 mb-6">
+          <FileCheck className="w-3 h-3" />
+          Official Grievance & Service Delivery Portal
         </div>
-        <h1 
-          className="font-outfit font-black text-5xl md:text-7xl tracking-tight leading-none bg-gradient-to-r from-slate-100 via-white to-kiosk-teal bg-clip-text text-transparent py-1 select-none"
-          onMouseEnter={speakElement}
-        >
-          Welcome to SUVIDHA
+        <h1 className="text-3xl md:text-5xl font-black text-gray-900 tracking-tight mb-4 leading-tight" onMouseEnter={speakElement}>
+          Government Citizen Services<br />& Grievance Registry
         </h1>
-        <p 
-          className="text-base md:text-lg text-slate-400 font-medium max-w-3xl mx-auto tracking-wide select-none"
-          onMouseEnter={speakElement}
-        >
-          Smart Urban Virtual Interactive Digital Helpdesk Assistant
+        <p className="text-gray-500 text-sm md:text-base max-w-2xl mx-auto leading-relaxed mb-8">
+          Apply for municipal utility connections, upload documents to the verification registry, and track your application under time-bound SLA regulations.
         </p>
-      </div>
+        <div className="flex flex-wrap gap-3 justify-center">
+          <button
+            onClick={() => navigate('/auth?role=citizen')}
+            className="flex items-center gap-2 px-6 py-3 bg-[#EA580C] hover:bg-[#C2410C] text-white font-bold text-sm rounded-lg shadow transition"
+          >
+            Citizen Portal Sign-In / नागरिक लॉग-इन
+            <ArrowRight className="w-4 h-4" />
+          </button>
+          <button
+            onClick={() => navigate('/auth?role=officer')}
+            className="flex items-center gap-2 px-6 py-3 bg-white border-2 border-[#EA580C] text-[#EA580C] font-bold text-sm rounded-lg hover:bg-orange-50 transition"
+          >
+            Officer Portal
+          </button>
+        </div>
+      </section>
 
-      {/* 2. Large Touch-Screen Service Cards Grid */}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-6 my-8 w-full">
-        {services.map((svc) => {
-          const SvcIcon = svc.icon;
-          return (
+      {/* ── Track Grievance ── */}
+      <section className="max-w-2xl mx-auto w-full">
+        <div className="bg-white border border-gray-200 rounded-xl p-6 shadow-sm">
+          <h3 className="text-xs font-extrabold text-gray-900 uppercase tracking-widest mb-4 flex items-center gap-2">
+            <Search className="w-4 h-4 text-[#EA580C]" />
+            Track Grievance Status • शिकायत की स्थिति जांचें
+          </h3>
+          <form onSubmit={handleSearchSubmit} className="flex gap-2">
+            <input
+              type="text"
+              placeholder="Enter Request ID (e.g. REQ-2026-982739)"
+              value={searchId}
+              onChange={(e) => setSearchId(e.target.value)}
+              className="flex-1 px-4 py-2.5 bg-gray-50 border border-gray-300 rounded-lg text-sm text-gray-900 font-medium focus:outline-none focus:border-[#EA580C] focus:ring-1 focus:ring-[#EA580C]"
+              required
+            />
             <button
-              key={svc.id}
-              onClick={(e) => handleCardClick(svc.path, svc.title, e)}
-              onMouseEnter={(e) => {
-                setActiveCard(svc.id);
-                speakElement(e, `${svc.title}. ${svc.subtitle}. ${svc.description}`);
-              }}
-              onMouseLeave={() => setActiveCard(null)}
-              className={`flex items-start text-left p-6 md:p-8 rounded-[2rem] border-2 transition-all duration-300 shadow-kiosk-depth hover:scale-[1.01] kiosk-btn relative overflow-hidden group ${
-                highContrast 
-                  ? 'bg-black border-yellow-400 text-yellow-400 hover:bg-yellow-400 hover:text-black' 
-                  : `bg-kiosk-navy/40 border-slate-800 hover:border-kiosk-teal/40`
-              }`}
+              type="submit"
+              disabled={searching}
+              className="px-5 py-2.5 bg-[#EA580C] hover:bg-[#C2410C] text-white rounded-lg text-sm font-bold transition disabled:opacity-60"
             >
-              {/* Background Glow Ring */}
-              {!highContrast && activeCard === svc.id && (
-                <div className="absolute -inset-px rounded-[2rem] border border-kiosk-teal/30 bg-kiosk-teal/5 pointer-events-none" />
-              )}
-
-              {/* Service Icon Panel */}
-              <div className={`p-4 rounded-2xl mr-5 flex items-center justify-center shrink-0 border ${
-                highContrast 
-                  ? 'border-yellow-400 bg-black' 
-                  : `bg-gradient-to-br ${svc.color} shadow-md border-white/10`
-              }`}>
-                <SvcIcon className="w-8 h-8" />
-              </div>
-
-              {/* Card content text */}
-              <div className="space-y-2 flex-1">
-                <div className="flex items-center justify-between">
-                  <h3 className="font-outfit font-black text-xl tracking-wide group-hover:text-kiosk-teal transition-colors">
-                    {svc.title}
-                  </h3>
-                  <ChevronRight className="w-5 h-5 text-slate-500 group-hover:text-kiosk-teal transform group-hover:translate-x-1 transition-all" />
-                </div>
-                <p className="text-[10px] text-slate-400 uppercase font-mono tracking-widest">{svc.subtitle}</p>
-                <p className="text-xs text-slate-300/80 leading-relaxed pr-2 font-medium">{svc.description}</p>
-              </div>
+              {searching ? 'Searching...' : 'Track'}
             </button>
-          );
-        })}
-      </div>
+          </form>
 
-      {/* 3. Bottom Big Actions Console */}
-      <div className="flex flex-col sm:flex-row gap-5 items-center justify-center py-6 border-t border-white/5 bg-kiosk-navy/15 rounded-3xl p-6 md:p-8">
-        
-        {/* Start Service Big Button */}
-        <button
-          onClick={handleStartService}
-          onMouseEnter={(e) => speakElement(e, "Start Service. Press to log in and access civic portals.")}
-          className={`flex items-center justify-center gap-3 px-10 py-5 rounded-[2rem] text-lg font-black transition-all duration-300 shadow-kiosk-depth hover:-translate-y-0.5 kiosk-btn w-full sm:w-auto shrink-0 ${
-            highContrast
-              ? 'bg-yellow-400 text-black border-2 border-black hover:bg-black hover:text-yellow-400'
-              : 'bg-kiosk-teal text-kiosk-dark border border-kiosk-teal shadow-kiosk-glow hover:bg-opacity-95'
-          }`}
-        >
-          <Play className="w-6 h-6 fill-current" />
-          <span>START SERVICE</span>
-        </button>
+          {trackResult && (
+            <div className="mt-4 p-4 rounded-lg border border-orange-100 bg-orange-50 text-sm space-y-2">
+              <div className="flex justify-between items-center border-b border-orange-100 pb-2">
+                <span className="font-bold text-gray-900">Ticket: {trackResult.requestId}</span>
+                <span className={`px-2 py-0.5 rounded text-xs font-black uppercase ${statusColors[trackResult.status] || 'bg-gray-100 text-gray-600'}`}>
+                  {trackResult.status}
+                </span>
+              </div>
+              <div className="grid grid-cols-2 gap-2 text-xs text-gray-600 font-medium">
+                <div>Citizen: <span className="text-gray-900 font-bold">{trackResult.citizenId?.name || 'Aadhaar User'}</span></div>
+                <div>Service: <span className="text-gray-900 font-bold capitalize">{trackResult.serviceType}</span></div>
+                <div>Department: <span className="text-gray-900 font-bold">{trackResult.assignedDepartment}</span></div>
+                <div>Team: <span className="text-gray-900 font-bold">{trackResult.assignedTeam || 'Unassigned'}</span></div>
+              </div>
+              {trackResult.remarks && (
+                <div className="text-xs text-gray-600 pt-2 border-t border-orange-100">
+                  Remarks: <span className="italic font-bold text-gray-800">"{trackResult.remarks}"</span>
+                </div>
+              )}
+            </div>
+          )}
 
-        {/* Talk to AI Voice Button */}
-        <button
-          onClick={handleTalkToAI}
-          onMouseEnter={(e) => speakElement(e, "Talk to AI Assistant. Activate local voice guidance.")}
-          className={`flex items-center justify-center gap-3 px-10 py-5 rounded-[2rem] text-lg font-black transition-all duration-300 shadow-kiosk-depth hover:-translate-y-0.5 border kiosk-btn w-full sm:w-auto ${
-            highContrast
-              ? 'bg-black text-yellow-400 border-yellow-400 hover:bg-yellow-400 hover:text-black'
-              : 'bg-kiosk-accent/60 text-slate-200 border-white/10 hover:bg-kiosk-accent hover:border-kiosk-teal/40'
-          }`}
-        >
-          <Mic className="w-6 h-6 text-kiosk-teal animate-pulse" />
-          <span>TALK TO AI ASSISTANT</span>
-        </button>
-      </div>
+          {trackError && (
+            <div className="mt-3 p-3 rounded-lg border border-red-200 bg-red-50 text-red-700 text-xs font-bold flex items-center gap-2">
+              <AlertCircle className="w-4 h-4 flex-shrink-0" />
+              {trackError}
+            </div>
+          )}
+        </div>
+      </section>
 
-      {/* Bottom Info Banner */}
-      <div className="text-center text-[10px] text-slate-500 py-2 flex items-center justify-center gap-1.5 font-bold">
-        <HelpCircle className="w-3.5 h-3.5 text-slate-500" />
-        <span>Kiosk Indiranagar Station. Secure local encryption is active. Qualcomm Hexagon NPU.</span>
-      </div>
+      {/* ── Services Grid ── */}
+      <section>
+        <div className="mb-5">
+          <h2 className="text-xl font-black text-gray-900 border-b border-gray-200 pb-2">
+            Citizen Utility Service Counters • नागरिक सेवा पटल
+          </h2>
+          <p className="text-xs text-gray-500 mt-1">Click any service to register a new connection request or lodge a grievance.</p>
+        </div>
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+          {services.map(svc => (
+            <div key={svc.id} className="bg-white border border-gray-200 rounded-xl p-5 shadow-sm hover:border-[#EA580C] hover:shadow-md transition flex flex-col gap-4">
+              <div className="flex items-center justify-between">
+                <div className="w-10 h-10 rounded-lg bg-orange-50 flex items-center justify-center">
+                  {svc.icon}
+                </div>
+                <span className="text-[10px] font-extrabold uppercase tracking-wide text-green-700 bg-green-50 px-2 py-0.5 rounded border border-green-200">
+                  SLA: {svc.sla}
+                </span>
+              </div>
+              <div>
+                <h4 className="font-bold text-gray-900 text-sm">{svc.title}</h4>
+                <span className="text-[10px] text-gray-400 font-semibold">{svc.hi}</span>
+                <p className="text-xs text-gray-500 mt-1.5 leading-relaxed">{svc.desc}</p>
+              </div>
+              <Link
+                to="/auth?role=citizen"
+                className="w-full text-center py-2 bg-orange-50 hover:bg-[#EA580C] hover:text-white text-[#EA580C] border border-orange-200 hover:border-[#EA580C] rounded-lg text-xs font-bold transition"
+              >
+                Apply Service
+              </Link>
+            </div>
+          ))}
+        </div>
+      </section>
+
+      {/* ── How It Works ── */}
+      <section>
+        <h2 className="text-xl font-black text-gray-900 border-b border-gray-200 pb-2 mb-5">
+          How It Works • यह कैसे कार्य करता है
+        </h2>
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+          {steps.map(step => (
+            <div key={step.n} className="bg-white border border-gray-200 rounded-xl p-5 shadow-sm">
+              <div className="w-8 h-8 rounded-full bg-[#EA580C] text-white flex items-center justify-center font-black text-xs mb-3">
+                {step.n}
+              </div>
+              <h5 className="font-bold text-gray-900 text-sm mb-1">{step.title}</h5>
+              <p className="text-xs text-gray-500 leading-relaxed">{step.desc}</p>
+            </div>
+          ))}
+        </div>
+      </section>
+
+      {/* ── Benefits ── */}
+      <section className="grid grid-cols-2 md:grid-cols-4 gap-4">
+        {[
+          { icon: <CheckCircle2 className="w-6 h-6 text-green-600" />, title: '100% Secure', sub: 'Aadhaar Verified' },
+          { icon: <Clock className="w-6 h-6 text-[#EA580C]" />, title: 'Time Bound', sub: 'SLA Mandate' },
+          { icon: <Activity className="w-6 h-6 text-[#EA580C]" />, title: 'Real-Time', sub: 'WebSocket Track' },
+          { icon: <Phone className="w-6 h-6 text-[#EA580C]" />, title: '1912 Toll Free', sub: '24/7 Redressal' },
+        ].map(b => (
+          <div key={b.title} className="bg-white border border-gray-200 rounded-xl p-5 text-center shadow-sm">
+            <div className="flex justify-center mb-2">{b.icon}</div>
+            <div className="font-black text-gray-900 text-base">{b.title}</div>
+            <div className="text-[10px] text-gray-500 uppercase font-bold tracking-wider mt-0.5">{b.sub}</div>
+          </div>
+        ))}
+      </section>
+
+      {/* ── Staff Gateways ── */}
+      <section>
+        <h2 className="text-xl font-black text-gray-900 border-b border-gray-200 pb-2 mb-5">
+          Official Staff Gateways • आधिकारिक पोर्टल पहुंच
+        </h2>
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div className="bg-white border border-gray-200 rounded-xl p-6 shadow-sm flex flex-col gap-4">
+            <div className="flex gap-4">
+              <div className="w-10 h-10 rounded-lg bg-orange-50 flex items-center justify-center flex-shrink-0">
+                <Building className="w-5 h-5 text-[#EA580C]" />
+              </div>
+              <div>
+                <h4 className="font-bold text-gray-900 text-sm mb-1">Department Officer Desk</h4>
+                <p className="text-xs text-gray-500 leading-relaxed">Login to check assigned civic utility files, verify documents, add remarks, and assign maintenance crews.</p>
+              </div>
+            </div>
+            <button
+              onClick={() => navigate('/auth?role=officer')}
+              className="w-full py-2.5 border-2 border-[#EA580C] text-[#EA580C] hover:bg-[#EA580C] hover:text-white rounded-lg text-sm font-bold transition"
+            >
+              Sign-In as Officer
+            </button>
+          </div>
+
+          <div className="bg-white border border-gray-200 rounded-xl p-6 shadow-sm flex flex-col gap-4">
+            <div className="flex gap-4">
+              <div className="w-10 h-10 rounded-lg bg-green-50 flex items-center justify-center flex-shrink-0">
+                <ShieldCheck className="w-5 h-5 text-green-600" />
+              </div>
+              <div>
+                <h4 className="font-bold text-gray-900 text-sm mb-1">Super Administrator Console</h4>
+                <p className="text-xs text-gray-500 leading-relaxed">Manage analytics, create officers, configure services, and audit system WebSocket logs.</p>
+              </div>
+            </div>
+            <button
+              onClick={() => navigate('/auth?role=admin')}
+              className="w-full py-2.5 border-2 border-green-600 text-green-700 hover:bg-green-600 hover:text-white rounded-lg text-sm font-bold transition"
+            >
+              Sign-In as Admin
+            </button>
+          </div>
+        </div>
+      </section>
+
+      {/* ── Contact ── */}
+      <section>
+        <h2 className="text-xl font-black text-gray-900 border-b border-gray-200 pb-2 mb-5">
+          Contact & Helpdesk • संपर्क एवं सहायता
+        </h2>
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+          {[
+            {
+              icon: <Phone className="w-5 h-5 text-[#EA580C]" />,
+              bg: 'bg-orange-50',
+              title: 'National Helpline',
+              body: <><b className="text-gray-900">1912 / 1800-11-0011</b><br />Available 24×7 in 12 regional languages.</>
+            },
+            {
+              icon: <Building className="w-5 h-5 text-green-600" />,
+              bg: 'bg-green-50',
+              title: 'Central Secretariat',
+              body: 'SUVIDHA Bhavan, CGO Complex, Lodhi Road, New Delhi – 110003'
+            },
+            {
+              icon: <CheckCircle2 className="w-5 h-5 text-purple-600" />,
+              bg: 'bg-purple-50',
+              title: 'Online Support',
+              body: <><b className="text-gray-900">support@suvidha.gov.in</b><br />Response guaranteed within 4 business hours.</>
+            }
+          ].map(c => (
+            <div key={c.title} className="bg-white border border-gray-200 rounded-xl p-5 shadow-sm space-y-3">
+              <div className={`w-10 h-10 rounded-lg ${c.bg} flex items-center justify-center`}>{c.icon}</div>
+              <h4 className="font-bold text-gray-900 text-sm">{c.title}</h4>
+              <p className="text-xs text-gray-500 leading-relaxed">{c.body}</p>
+            </div>
+          ))}
+        </div>
+      </section>
 
     </div>
   );

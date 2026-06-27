@@ -1,16 +1,17 @@
 import Request from '../models/Request.js';
-import Complaint from '../models/Complaint.js';
+import User from '../models/User.js';
 
 /**
- * @desc    Get dashboard metrics, SLA violations, and kiosk analytics
- * @route   GET /admin/dashboard
+ * @desc    Get dashboard metrics, SLA violations, and department breakdowns
+ * @route   GET /api/admin/dashboard
  * @access  Private (Admin role)
  */
 export const getDashboardMetrics = async (req, res) => {
   try {
     // 1. Calculate status counts
     const total = await Request.countDocuments();
-    const pending = await Request.countDocuments({ status: { $in: ['Pending', 'In-Progress'] } });
+    const pending = await Request.countDocuments({ status: 'Pending' });
+    const inProgress = await Request.countDocuments({ status: 'In-Progress' });
     const approved = await Request.countDocuments({ status: 'Approved' });
     const rejected = await Request.countDocuments({ status: 'Rejected' });
     const completed = await Request.countDocuments({ status: 'Completed' });
@@ -39,6 +40,7 @@ export const getDashboardMetrics = async (req, res) => {
       metrics: {
         total,
         pending,
+        inProgress,
         approved,
         rejected,
         completed
@@ -53,44 +55,17 @@ export const getDashboardMetrics = async (req, res) => {
 };
 
 /**
- * @desc    Approve request ticket
- * @route   PUT /admin/approve
+ * @desc    Get list of all departmental officers
+ * @route   GET /api/admin/officers
  * @access  Private (Admin role)
  */
-export const approveRequest = async (req, res) => {
+export const getOfficers = async (req, res) => {
   try {
-    const { id } = req.body;
-
-    if (!id) {
-      return res.status(400).json({ success: false, message: 'Please specify the request ID' });
-    }
-
-    const request = await Request.findOne({
-      $or: [{ requestId: id.toUpperCase() }, { _id: id }]
-    });
-
-    if (!request) {
-      return res.status(404).json({ success: false, message: 'Request not found' });
-    }
-
-    request.status = 'Approved';
-    request.assignedDepartment = 'Department Processing Wing';
-    await request.save();
-
-    // Emit Socket update
-    const io = req.app.get('io');
-    if (io) {
-      io.emit('statusUpdate', {
-        requestId: request.requestId,
-        status: request.status,
-        department: request.assignedDepartment
-      });
-    }
-
+    const officers = await User.find({ role: 'officer' }).sort({ createdAt: -1 });
     return res.status(200).json({
       success: true,
-      message: 'Request ticket approved successfully',
-      request
+      count: officers.length,
+      officers
     });
   } catch (error) {
     return res.status(500).json({ success: false, message: error.message });
@@ -98,44 +73,67 @@ export const approveRequest = async (req, res) => {
 };
 
 /**
- * @desc    Reject request ticket
- * @route   PUT /admin/reject
+ * @desc    Create a new departmental officer
+ * @route   POST /api/admin/officers
  * @access  Private (Admin role)
  */
-export const rejectRequest = async (req, res) => {
+export const createOfficer = async (req, res) => {
   try {
-    const { id, reason } = req.body;
+    const { name, email, password, department } = req.body;
 
-    if (!id) {
-      return res.status(400).json({ success: false, message: 'Please specify the request ID' });
+    if (!name || !email || !password || !department) {
+      return res.status(400).json({ success: false, message: 'Please provide all details (name, email, password, department)' });
     }
 
-    const request = await Request.findOne({
-      $or: [{ requestId: id.toUpperCase() }, { _id: id }]
+    const emailExists = await User.findOne({ email });
+    if (emailExists) {
+      return res.status(400).json({ success: false, message: 'An officer/staff with this email already exists' });
+    }
+
+    const officer = await User.create({
+      name,
+      email,
+      password,
+      department,
+      role: 'officer'
     });
 
-    if (!request) {
-      return res.status(404).json({ success: false, message: 'Request not found' });
+    return res.status(201).json({
+      success: true,
+      message: 'Officer account created successfully',
+      officer: {
+        id: officer._id,
+        name: officer.name,
+        email: officer.email,
+        department: officer.department,
+        role: officer.role
+      }
+    });
+  } catch (error) {
+    return res.status(500).json({ success: false, message: error.message });
+  }
+};
+
+/**
+ * @desc    Delete an officer
+ * @route   DELETE /api/admin/officers/:id
+ * @access  Private (Admin role)
+ */
+export const deleteOfficer = async (req, res) => {
+  try {
+    const { id } = req.params;
+
+    const officer = await User.findById(id);
+
+    if (!officer || officer.role !== 'officer') {
+      return res.status(404).json({ success: false, message: 'Officer not found' });
     }
 
-    request.status = 'Rejected';
-    request.assignedDepartment = `Closed - Reason: ${reason || 'Incomplete Documentation'}`;
-    await request.save();
-
-    // Emit Socket update
-    const io = req.app.get('io');
-    if (io) {
-      io.emit('statusUpdate', {
-        requestId: request.requestId,
-        status: request.status,
-        department: request.assignedDepartment
-      });
-    }
+    await User.findByIdAndDelete(id);
 
     return res.status(200).json({
       success: true,
-      message: 'Request ticket rejected',
-      request
+      message: 'Officer account deleted successfully'
     });
   } catch (error) {
     return res.status(500).json({ success: false, message: error.message });

@@ -13,7 +13,7 @@ const generateToken = (payload) => {
 
 /**
  * @desc    Generate OTP for mobile number
- * @route   POST /auth/login
+ * @route   POST /api/auth/login
  * @access  Public
  */
 export const requestOtp = async (req, res) => {
@@ -24,14 +24,12 @@ export const requestOtp = async (req, res) => {
       return res.status(400).json({ success: false, message: 'Please provide a valid 10-digit mobile number' });
     }
 
-    // Generate a fixed OTP for ease of hackathon demo, or a random one
-    // Fallback: 123456 is always accepted
+    // Generate a simulated OTP (always accept '123456' as fallback, but generate random)
     const generatedOtp = Math.floor(100000 + Math.random() * 900000).toString();
     activeOtps.set(mobile, generatedOtp);
 
     console.log(`[SMS Gateway Simulator] Sending OTP: ${generatedOtp} to +91 ${mobile}`);
 
-    // Return the generated OTP in response *exclusively* for hackathon UI automation/testing ease
     return res.status(200).json({ 
       success: true, 
       message: 'OTP generated and sent successfully (SMS Simulated)',
@@ -44,7 +42,7 @@ export const requestOtp = async (req, res) => {
 
 /**
  * @desc    Verify OTP and return JWT token (Signs up if first-time user)
- * @route   POST /auth/verify-otp
+ * @route   POST /api/auth/verify-otp
  * @access  Public
  */
 export const verifyOtp = async (req, res) => {
@@ -71,15 +69,20 @@ export const verifyOtp = async (req, res) => {
     if (!user) {
       // Create new citizen profile dynamically
       user = await User.create({
-        name: name || 'Rohan Sharma',
+        name: name || 'New Citizen',
         mobile,
         aadhaar: aadhaar || undefined,
         role: 'citizen'
       });
-    } else if (aadhaar && !user.aadhaar) {
-      // Update Aadhaar if not present
-      user.aadhaar = aadhaar;
-      await user.save();
+    } else {
+      if (aadhaar && !user.aadhaar) {
+        user.aadhaar = aadhaar;
+        await user.save();
+      }
+      if (name && user.name === 'New Citizen') {
+        user.name = name;
+        await user.save();
+      }
     }
 
     // Sign Token
@@ -95,6 +98,52 @@ export const verifyOtp = async (req, res) => {
         mobile: user.mobile,
         aadhaar: user.aadhaar ? `XXXX-XXXX-${user.aadhaar.slice(-4)}` : null, // masked representation
         role: user.role
+      }
+    });
+  } catch (error) {
+    return res.status(500).json({ success: false, message: error.message });
+  }
+};
+
+/**
+ * @desc    Staff Login (Officer/Admin email + password verification)
+ * @route   POST /api/auth/staff-login
+ * @access  Public
+ */
+export const staffLogin = async (req, res) => {
+  try {
+    const { email, password } = req.body;
+
+    if (!email || !password) {
+      return res.status(400).json({ success: false, message: 'Please provide email and password' });
+    }
+
+    // Find staff user
+    const user = await User.findOne({ email }).select('+password');
+
+    if (!user || (user.role !== 'officer' && user.role !== 'admin')) {
+      return res.status(401).json({ success: false, message: 'Invalid credentials or user is not authorized staff' });
+    }
+
+    // Simple plain text password check for ease of hackathon demo.
+    // In production, we'd use bcrypt compare, but standard string comparison works.
+    if (password !== user.password) {
+      return res.status(401).json({ success: false, message: 'Invalid email or password' });
+    }
+
+    // Sign Token
+    const token = generateToken({ id: user._id, role: user.role, department: user.department });
+
+    return res.status(200).json({
+      success: true,
+      message: `${user.role.toUpperCase()} authenticated successfully`,
+      token,
+      user: {
+        id: user._id,
+        name: user.name,
+        email: user.email,
+        role: user.role,
+        department: user.department
       }
     });
   } catch (error) {

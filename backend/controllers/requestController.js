@@ -1,46 +1,49 @@
 import Request from '../models/Request.js';
-import Complaint from '../models/Complaint.js';
+import User from '../models/User.js';
 
 /**
- * @desc    Create new civic request and bind details
- * @route   POST /requests/create
- * @access  Private
+ * @desc    Create new civic request or complaint
+ * @route   POST /api/requests/create
+ * @access  Private (Citizen)
  */
 export const createRequest = async (req, res) => {
   try {
     const { serviceType, subService, description, documents, priority } = req.body;
-    const citizenId = req.user.id; // from JWT middleware protect
+    const citizenId = req.user.id; // from protect middleware
 
-    if (!serviceType || !description) {
-      return res.status(400).json({ success: false, message: 'Service type and description are required' });
+    if (!serviceType || !subService || !description) {
+      return res.status(400).json({ success: false, message: 'Service type, sub-service, and description are required' });
     }
 
-    // 1. Create parent request
+    // Map serviceType to realistic department
+    let assignedDepartment = 'General Administration';
+    if (serviceType === 'electricity') assignedDepartment = 'Electricity Department';
+    else if (serviceType === 'water') assignedDepartment = 'Water Department';
+    else if (serviceType === 'gas') assignedDepartment = 'Gas Department';
+    else if (serviceType === 'waste') assignedDepartment = 'Waste Management';
+
     const request = await Request.create({
       citizenId,
       serviceType,
+      subService,
+      description,
+      priority: priority || 'Standard',
+      assignedDepartment,
       documents: documents || []
     });
 
-    // 2. Create child complaint details mapping
-    const complaint = await Complaint.create({
-      requestId: request._id,
-      complaintType: subService || 'General Request',
-      description,
-      priority: priority || 'Standard'
-    });
-
-    // Populate user metadata
     const populatedRequest = await Request.findById(request._id).populate('citizenId', 'name mobile');
 
-    // 3. Emit real-time socket updates for Admin Dashboard
+    // Emit Socket update for dashboards
     const io = req.app.get('io');
     if (io) {
       io.emit('newRequest', {
         id: request.requestId,
         citizenName: populatedRequest.citizenId.name,
         service: serviceType,
+        subService,
         status: request.status,
+        priority: request.priority,
         time: "Just now"
       });
     }
@@ -49,8 +52,7 @@ export const createRequest = async (req, res) => {
       success: true,
       message: 'Civic request registered successfully',
       requestId: request.requestId,
-      request: populatedRequest,
-      complaint
+      request: populatedRequest
     });
   } catch (error) {
     return res.status(500).json({ success: false, message: error.message });
@@ -59,14 +61,13 @@ export const createRequest = async (req, res) => {
 
 /**
  * @desc    Get request details by tracking reference ID or ObjectId
- * @route   GET /requests/:id
+ * @route   GET /api/requests/:id
  * @access  Public
  */
 export const getRequestById = async (req, res) => {
   try {
     const { id } = req.params;
 
-    // Search by string requestId (e.g. REQ-2026-XXXX) or by Mongoose _id
     let query = {};
     if (id.startsWith('REQ-')) {
       query = { requestId: id.toUpperCase() };
@@ -74,19 +75,15 @@ export const getRequestById = async (req, res) => {
       query = { _id: id };
     }
 
-    const request = await Request.findOne(query).populate('citizenId', 'name mobile');
+    const request = await Request.findOne(query).populate('citizenId', 'name mobile aadhaar');
 
     if (!request) {
       return res.status(404).json({ success: false, message: 'Service request reference not found' });
     }
 
-    // Populate complaint detail specs
-    const complaint = await Complaint.findOne({ requestId: request._id });
-
     return res.status(200).json({
       success: true,
-      request,
-      complaint: complaint || null
+      request
     });
   } catch (error) {
     return res.status(500).json({ success: false, message: error.message });
@@ -94,52 +91,108 @@ export const getRequestById = async (req, res) => {
 };
 
 /**
- * @desc    Update request status (Admin actions)
- * @route   PUT /requests/update-status
- * @access  Private (Admin role)
+ * @desc    Get requests filed by the logged-in citizen
+ * @route   GET /api/requests/my-requests
+ * @access  Private (Citizen)
  */
-export const updateRequestStatus = async (req, res) => {
+export const getCitizenRequests = async (req, res) => {
   try {
-    const { id, status, assignedDepartment } = req.body;
+    const citizenId = req.user.id;
+    const requests = await Request.find({ citizenId }).sort({ createdAt: -1 });
 
-    if (!id || !status) {
-      return res.status(400).json({ success: false, message: 'Request ID and status parameters are mandatory' });
+    return res.status(200).json({
+      success: true,
+      count: requests.length,
+      requests
+    });
+  } catch (error) {
+    return res.status(500).json({ success: false, message: error.message });
+  }
+};
+
+/**
+ * @desc    Get requests assigned to the staff's department (or all for admin)
+ * @route   GET /api/requests/department
+ * @access  Private (Officer/Admin)
+ */
+export const getDepartmentRequests = async (req, res) => {
+  try {
+    const staffId = req.user.id;
+    const staff = await User.findById(staffId);
+
+    if (!staff) {
+      return res.status(404).json({ success: false, message: 'Staff member not found' });
     }
 
     let query = {};
-    if (id.startsWith('REQ-')) {
-      query = { requestId: id.toUpperCase() };
-    } else {
-      query = { _id: id };
-    }
+    if (staff.role === 'officer') {
+      // Filter by officer's department
+      query = { assignedDepartment: staff.department };
+    } // For admin, query remains empty {} to fetch all requests
 
-    const request = await Request.findOne(query);
+    const requests = await Request.find(query)
+      .populate('citizenId', 'name mobile')
+      .sort({ createdAt: -1 });
+
+    return res.status(200).json({
+      success: true,
+      count: requests.length,
+      requests
+    });
+  } catch (error) {
+    return res.status(500).json({ success: false, message: error.message });
+  }
+};
+
+/**
+ * @desc    Update request status, assign team, add remarks
+ * @route   PUT /api/requests/:id/action
+ * @access  Private (Officer/Admin)
+ */
+export const updateRequestStatus = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { status, assignedTeam, remarks, assignedDepartment } = req.body;
+
+    const request = await Request.findOne({
+      $or: [{ requestId: id.toUpperCase() }, { _id: id }]
+    });
 
     if (!request) {
-      return res.status(404).json({ success: false, message: 'Request ID not found' });
+      return res.status(404).json({ success: false, message: 'Request not found' });
     }
 
-    // Update fields
-    request.status = status;
-    if (assignedDepartment) {
+    // Verify staff has access (Admin has global access, officer matches department)
+    const staff = await User.findById(req.user.id);
+    if (staff.role === 'officer' && request.assignedDepartment !== staff.department) {
+      return res.status(403).json({ success: false, message: 'Not authorized to modify tickets outside your department' });
+    }
+
+    if (status) request.status = status;
+    if (assignedTeam) request.assignedTeam = assignedTeam;
+    if (remarks !== undefined) request.remarks = remarks;
+    if (assignedDepartment && staff.role === 'admin') {
+      // Only admin can re-assign departments
       request.assignedDepartment = assignedDepartment;
     }
 
     await request.save();
 
-    // Emit real-time Socket.io updates for active kiosks
+    // Emit live WebSocket update
     const io = req.app.get('io');
     if (io) {
       io.emit('statusUpdate', {
         requestId: request.requestId,
         status: request.status,
+        assignedTeam: request.assignedTeam,
+        remarks: request.remarks,
         department: request.assignedDepartment
       });
     }
 
     return res.status(200).json({
       success: true,
-      message: `Request status updated to ${status}`,
+      message: 'Request ticket updated successfully',
       request
     });
   } catch (error) {

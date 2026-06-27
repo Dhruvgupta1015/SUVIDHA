@@ -1,462 +1,268 @@
 import React, { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import { useLanguage } from '../context/LanguageContext';
 import { useAccessibility } from '../context/AccessibilityContext';
-import { 
-  ShieldCheck, 
-  Fingerprint, 
-  Smartphone, 
-  ArrowLeft, 
-  Volume2, 
-  Clock, 
-  RotateCcw,
-  CheckCircle2,
-  AlertTriangle
+import {
+  ShieldCheck, Smartphone, Mail, Lock, User as UserIcon,
+  KeyRound, AlertTriangle, CheckCircle2
 } from 'lucide-react';
-
 import { authAPI } from '../utils/api';
 
 export const Auth = () => {
-  const { t } = useLanguage();
-  const { speakElement, speak, highContrast } = useAccessibility();
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
+  const roleParam = searchParams.get('role') || 'citizen';
 
-  // Authentication State
-  const [authMethod, setAuthMethod] = useState('otp'); // 'otp' | 'aadhaar'
-  const [mobileNum, setMobileNum] = useState('');
-  const [aadhaarNum, setAadhaarNum] = useState('');
-  const [otpSent, setOtpSent] = useState(false);
+  const { t } = useLanguage();
+  const { speak } = useAccessibility();
+
+  const [loginType, setLoginType] = useState(roleParam === 'citizen' ? 'citizen' : 'staff');
+  const [mobile, setMobile] = useState('');
   const [otpVal, setOtpVal] = useState('');
-  const [activeInput, setActiveInput] = useState('mobile'); // 'mobile' | 'otp' | 'aadhaar'
-  
-  // UX State
+  const [otpSent, setOtpSent] = useState(false);
+  const [citizenName, setCitizenName] = useState('');
+  const [aadhaar, setAadhaar] = useState('');
+  const [demoOtp, setDemoOtp] = useState('');
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
-  const [success, setSuccess] = useState(false);
-  const [sessionTime, setSessionTime] = useState(120); // 120 seconds countdown
   const [errorMsg, setErrorMsg] = useState('');
+  const [success, setSuccess] = useState(false);
 
-  // Voice Guidance Instruction Speak
-  const triggerVoiceGuidance = () => {
-    let guideText = "";
-    if (success) {
-      guideText = "Verification successful. Redirecting you to the kiosk homepage.";
-    } else if (otpSent) {
-      guideText = "A six digit code has been sent to your mobile. Please enter the OTP using the on screen numeric keypad.";
-    } else if (authMethod === 'otp') {
-      guideText = "Please tap the input box and use the numeric keypad on the right to enter your ten digit mobile number. Then click Generate OTP.";
-    } else {
-      guideText = "Please tap the Aadhaar input box and enter your twelve digit Aadhaar Virtual ID number using the keypad on the right.";
-    }
-    speak(guideText);
-  };
-
-  // Reset Session timer on user interactions
-  const resetTimer = () => {
-    setSessionTime(120);
-    setErrorMsg('');
-  };
-
-  // Countdown timer effect
   useEffect(() => {
-    if (success) return;
-    const interval = setInterval(() => {
-      setSessionTime((prev) => {
-        if (prev <= 1) {
-          clearInterval(interval);
-          speak("Session expired due to inactivity. Returning to home screen.");
-          navigate('/');
-          return 0;
-        }
-        return prev - 1;
-      });
-    }, 1000);
-    return () => clearInterval(interval);
-  }, [success, navigate]);
-
-  // Sync active input when changing tabs
-  const handleTabChange = (method) => {
-    resetTimer();
-    setAuthMethod(method);
-    setOtpSent(false);
-    setOtpVal('');
-    if (method === 'otp') {
-      setActiveInput('mobile');
+    if (roleParam === 'citizen') {
+      setLoginType('citizen');
     } else {
-      setActiveInput('aadhaar');
+      setLoginType('staff');
+      setEmail(roleParam === 'admin' ? 'admin@suvidha.gov.in' : 'officer.elec@suvidha.gov.in');
+      setPassword(roleParam === 'admin' ? 'admin123' : 'officer123');
     }
-  };
+    setErrorMsg('');
+  }, [roleParam]);
 
-  // Numeric Keypad touch parser
-  const handleKeyPress = (key) => {
-    resetTimer();
-    
-    if (activeInput === 'mobile') {
-      if (key === '⌫') {
-        setMobileNum(prev => prev.slice(0, -1));
-      } else if (key === 'Clear') {
-        setMobileNum('');
-      } else if (mobileNum.length < 10 && /^\d$/.test(key)) {
-        setMobileNum(prev => prev + key);
-      }
-    } else if (activeInput === 'otp') {
-      if (key === '⌫') {
-        setOtpVal(prev => prev.slice(0, -1));
-      } else if (key === 'Clear') {
-        setOtpVal('');
-      } else if (otpVal.length < 6 && /^\d$/.test(key)) {
-        setOtpVal(prev => prev + key);
-      }
-    } else if (activeInput === 'aadhaar') {
-      if (key === '⌫') {
-        setAadhaarNum(prev => prev.slice(0, -1));
-      } else if (key === 'Clear') {
-        setAadhaarNum('');
-      } else if (aadhaarNum.length < 12 && /^\d$/.test(key)) {
-        setAadhaarNum(prev => prev + key);
-      }
-    }
-  };
-
-  // Submit Mobile Number -> Send OTP
-  const handleGetOtp = async (e) => {
+  const handleRequestOtp = async (e) => {
     e.preventDefault();
-    resetTimer();
-    if (mobileNum.length !== 10) {
-      speak("Invalid number. Please enter exactly ten digits.");
-      setErrorMsg("Mobile number must be exactly 10 digits");
-      return;
-    }
-
-    setLoading(true);
-    speak("Sending OTP verification code");
+    if (!/^\d{10}$/.test(mobile)) { setErrorMsg('Please enter a valid 10-digit mobile number'); return; }
+    setLoading(true); setErrorMsg('');
     try {
-      const response = await authAPI.requestOtp(mobileNum);
-      setLoading(false);
-      setOtpSent(true);
-      setActiveInput('otp');
-      speak("OTP sent successfully. Please check your phone.");
-      if (response.data.demoOtp) {
-        console.log(`[Demo helper] Generated OTP is: ${response.data.demoOtp}`);
-      }
-    } catch (err) {
-      setLoading(false);
-      setErrorMsg(err.response?.data?.message || "Failed to contact auth server");
-      speak("Failed to generate OTP. Try again.");
+      const response = await authAPI.requestOtp(mobile);
+      setLoading(false); setOtpSent(true);
+      if (response.data?.demoOtp) { setDemoOtp(response.data.demoOtp); speak(`OTP: ${response.data.demoOtp}`); }
+    } catch {
+      setLoading(false); setOtpSent(true); setDemoOtp('123456');
     }
   };
 
-  // Submit Verification OTP or Aadhaar
-  const handleVerify = async (e) => {
+  const handleVerifyOtp = async (e) => {
     e.preventDefault();
-    resetTimer();
-
-    if (authMethod === 'otp' && otpVal.length !== 6) {
-      speak("Please enter the complete six digit OTP.");
-      setErrorMsg("OTP must be 6 digits");
-      return;
-    }
-    if (authMethod === 'aadhaar' && aadhaarNum.length !== 12) {
-      speak("Please enter a valid twelve digit Aadhaar ID.");
-      setErrorMsg("Aadhaar must be 12 digits");
-      return;
-    }
-
-    setLoading(true);
-    speak("Verifying credentials");
+    if (!/^\d{6}$/.test(otpVal)) { setErrorMsg('Please enter a 6-digit OTP'); return; }
+    setLoading(true); setErrorMsg('');
     try {
-      let response;
-      if (authMethod === 'otp') {
-        response = await authAPI.verifyOtp({
-          mobile: mobileNum,
-          otp: otpVal,
-          name: "Rohan Sharma"
-        });
-      } else {
-        response = await authAPI.verifyOtp({
-          mobile: "9876543210",
-          otp: "123456",
-          name: "Aadhaar Verified Citizen",
-          aadhaar: aadhaarNum
-        });
-      }
-
+      const response = await authAPI.verifyOtp({ mobile, otp: otpVal, name: citizenName || undefined, aadhaar: aadhaar || undefined });
       const { token, user } = response.data;
-      localStorage.setItem('token', token);
-      localStorage.setItem('user', JSON.stringify(user));
-
-      setLoading(false);
-      setSuccess(true);
-      speak("Verification successful. Logging in.");
-      setTimeout(() => {
-        navigate('/services');
-      }, 1500);
+      localStorage.setItem('token', token); localStorage.setItem('user', JSON.stringify(user));
+      setLoading(false); setSuccess(true);
+      setTimeout(() => navigate('/citizen'), 1200);
     } catch (err) {
-      setLoading(false);
-      setErrorMsg(err.response?.data?.message || "Verification code failed");
-      speak("Verification failed");
+      setLoading(false); setErrorMsg(err.response?.data?.message || 'OTP verification failed');
     }
   };
+
+  const handleStaffLogin = async (e) => {
+    e.preventDefault();
+    if (!email || !password) { setErrorMsg('Enter email and password'); return; }
+    setLoading(true); setErrorMsg('');
+    try {
+      const response = await authAPI.staffLogin({ email, password });
+      const { token, user } = response.data;
+      localStorage.setItem('token', token); localStorage.setItem('user', JSON.stringify(user));
+      setLoading(false); setSuccess(true);
+      setTimeout(() => navigate(user.role === 'admin' ? '/admin' : '/officer'), 1200);
+    } catch (err) {
+      setLoading(false); setErrorMsg(err.response?.data?.message || 'Invalid credentials');
+    }
+  };
+
+  const handleQuickPrefill = (type) => {
+    setErrorMsg('');
+    if (type === 'admin') { setLoginType('staff'); setEmail('admin@suvidha.gov.in'); setPassword('admin123'); }
+    else if (type === 'elec_officer') { setLoginType('staff'); setEmail('officer.elec@suvidha.gov.in'); setPassword('officer123'); }
+    else if (type === 'water_officer') { setLoginType('staff'); setEmail('officer.water@suvidha.gov.in'); setPassword('officer123'); }
+    else if (type === 'citizen_user') { setLoginType('citizen'); setMobile('9876543210'); setOtpSent(false); setOtpVal(''); }
+  };
+
+  const inputClass = "w-full px-4 py-2.5 bg-gray-50 border border-gray-300 rounded-lg text-sm text-gray-900 font-medium focus:outline-none focus:border-[#EA580C] focus:ring-1 focus:ring-[#EA580C] placeholder-gray-400";
 
   return (
-    <div className="flex-1 flex flex-col max-w-5xl mx-auto w-full py-4 space-y-6">
-      
-      {/* 1. Header Navigation & Telemetry row */}
-      <div className="flex items-center justify-between pb-4 border-b border-white/5">
-        <button
-          onClick={() => navigate('/')}
-          onMouseEnter={(e) => speakElement(e, "Back to home screen")}
-          className={`flex items-center gap-2 px-5 py-2.5 rounded-2xl text-xs font-bold border transition kiosk-btn ${
-            highContrast 
-              ? 'bg-black text-yellow-400 border-yellow-400 hover:bg-yellow-400 hover:text-black' 
-              : 'bg-kiosk-navy hover:bg-kiosk-accent border-slate-700'
-          }`}
-        >
-          <ArrowLeft className="w-4 h-4" />
-          <span>Exit to Home</span>
-        </button>
+    <div className="flex items-center justify-center max-w-4xl mx-auto w-full py-10 px-4">
+      <div className="grid grid-cols-1 md:grid-cols-5 gap-6 items-start w-full">
 
-        <div className="flex items-center gap-4">
-          {/* Timeout Timer */}
-          <div className="flex items-center gap-2 text-xs font-mono font-bold text-slate-400 bg-white/5 px-4 py-2 rounded-2xl border border-white/5">
-            <Clock className={`w-4 h-4 ${sessionTime < 30 ? 'text-rose-500 animate-pulse' : 'text-kiosk-teal'}`} />
-            <span>Kiosk Idle Reset: <b className="text-slate-100">{sessionTime}s</b></span>
-          </div>
+        {/* ── Left: Login Form ── */}
+        <div className="md:col-span-3 bg-white border border-gray-200 rounded-2xl shadow-sm p-8">
 
-          {/* Voice help */}
-          <button
-            onClick={triggerVoiceGuidance}
-            onMouseEnter={(e) => speakElement(e, "Speak screen instructions")}
-            className="p-3 bg-kiosk-teal/10 hover:bg-kiosk-teal/20 border border-kiosk-teal/30 rounded-full text-kiosk-teal kiosk-btn"
-            aria-label="Speak screen instructions"
-          >
-            <Volume2 className="w-4 h-4" />
-          </button>
-        </div>
-      </div>
-
-      {/* 2. Main content split viewport */}
-      <div className="grid grid-cols-1 lg:grid-cols-5 gap-8 items-stretch flex-1">
-        
-        {/* Left Side: Authentication Active Form Box (Takes 3 cols) */}
-        <div className={`lg:col-span-3 p-8 md:p-10 rounded-[2.5rem] border shadow-kiosk-depth flex flex-col justify-between transition ${
-          highContrast 
-            ? 'bg-black border-yellow-400 text-yellow-400' 
-            : 'bg-kiosk-navy/55 border-white/5 backdrop-blur-md text-slate-100'
-        }`}>
-          
-          <div>
-            {/* Form Header Title */}
-            <div className="flex items-center gap-3.5 mb-6">
-              <div className="p-3 bg-kiosk-teal/10 border border-kiosk-teal/30 rounded-2xl text-kiosk-teal shadow-kiosk-glow">
-                <ShieldCheck className="w-7 h-7" />
-              </div>
-              <div>
-                <h2 className="text-2xl md:text-3xl font-outfit font-black tracking-wide" onMouseEnter={speakElement}>
-                  Citizen Verification
-                </h2>
-                <p className="text-xs text-slate-400">Identify yourself to securely file grievances or check histories</p>
-              </div>
+          {/* Header */}
+          <div className="flex items-center gap-3 mb-6">
+            <div className="w-10 h-10 rounded-lg bg-orange-50 flex items-center justify-center">
+              <ShieldCheck className="w-5 h-5 text-[#EA580C]" />
             </div>
-
-            {/* Error Message banner */}
-            {errorMsg && (
-              <div className="p-4 bg-rose-500/10 border border-rose-500/30 text-rose-400 text-xs font-bold rounded-2xl mb-6 flex items-center gap-2">
-                <AlertTriangle className="w-4 h-4 shrink-0" />
-                <span>{errorMsg}</span>
-              </div>
-            )}
-
-            {success ? (
-              /* Success Anim View */
-              <div className="flex-1 flex flex-col items-center justify-center text-center py-16 space-y-4">
-                <div className="w-20 h-20 bg-emerald-500/10 border-2 border-emerald-500/40 rounded-full flex items-center justify-center text-emerald-400 shadow-lg animate-bounce">
-                  <CheckCircle2 className="w-10 h-10" />
-                </div>
-                <h3 className="font-outfit font-black text-2xl text-emerald-400">Profile Verified successfully</h3>
-                <p className="text-xs text-slate-400">Loading secure helpdesk session context...</p>
-              </div>
-            ) : (
-              /* Verification choices */
-              <div className="space-y-6">
-                
-                {/* Method switcher tabs */}
-                {!otpSent && (
-                  <div className="grid grid-cols-2 gap-2.5 p-2 bg-kiosk-dark/60 border border-white/5 rounded-2xl">
-                    <button
-                      type="button"
-                      onClick={() => handleTabChange('otp')}
-                      className={`py-3.5 rounded-xl text-xs font-black transition flex items-center justify-center gap-2 kiosk-btn ${
-                        authMethod === 'otp'
-                          ? 'bg-kiosk-teal text-kiosk-dark font-black shadow-kiosk-glow'
-                          : 'text-slate-400 hover:text-slate-200'
-                      }`}
-                    >
-                      <Smartphone className="w-4 h-4" />
-                      Mobile OTP Verify
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => handleTabChange('aadhaar')}
-                      className={`py-3.5 rounded-xl text-xs font-black transition flex items-center justify-center gap-2 kiosk-btn ${
-                        authMethod === 'aadhaar'
-                          ? 'bg-kiosk-teal text-kiosk-dark font-black shadow-kiosk-glow'
-                          : 'text-slate-400 hover:text-slate-200'
-                      }`}
-                    >
-                      <Fingerprint className="w-4 h-4" />
-                      Aadhaar Virtual ID
-                    </button>
-                  </div>
-                )}
-
-                {/* Form fields selection */}
-                {authMethod === 'otp' ? (
-                  /* Option 1: Mobile Form */
-                  <div className="space-y-5">
-                    {/* Mobile Input box */}
-                    <div 
-                      onClick={() => { resetTimer(); setActiveInput('mobile'); }}
-                      className={`space-y-2 p-4 rounded-2xl border-2 transition cursor-pointer ${
-                        activeInput === 'mobile' 
-                          ? 'border-kiosk-teal bg-kiosk-dark/50' 
-                          : 'border-white/5 bg-kiosk-dark/20 hover:border-slate-800'
-                      }`}
-                    >
-                      <label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest block">Citizen Mobile Number</label>
-                      <div className="flex items-center text-lg font-bold font-mono">
-                        <span className="text-slate-500 mr-2">+91</span>
-                        <input
-                          type="text"
-                          value={mobileNum}
-                          readOnly
-                          placeholder="Tap keypad to enter 10 digit number"
-                          className="bg-transparent border-none outline-none p-0 text-slate-100 placeholder-slate-600 text-lg w-full font-bold select-none cursor-pointer"
-                        />
-                      </div>
-                    </div>
-
-                    {/* OTP verification box - shown after OTP send trigger */}
-                    {otpSent && (
-                      <div 
-                        onClick={() => { resetTimer(); setActiveInput('otp'); }}
-                        className={`space-y-2 p-4 rounded-2xl border-2 transition cursor-pointer ${
-                          activeInput === 'otp' 
-                            ? 'border-kiosk-teal bg-kiosk-dark/50' 
-                            : 'border-white/5 bg-kiosk-dark/20 hover:border-slate-800'
-                        }`}
-                      >
-                        <label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest block">Enter 6-Digit OTP Code</label>
-                        <input
-                          type="text"
-                          value={otpVal}
-                          readOnly
-                          placeholder="------"
-                          className="bg-transparent border-none outline-none p-0 text-slate-100 placeholder-slate-600 text-xl font-bold tracking-[0.6em] w-full text-center select-none cursor-pointer"
-                        />
-                      </div>
-                    )}
-                  </div>
-                ) : (
-                  /* Option 2: Aadhaar ID Form */
-                  <div className="space-y-5">
-                    <div 
-                      onClick={() => { resetTimer(); setActiveInput('aadhaar'); }}
-                      className={`space-y-2 p-4 rounded-2xl border-2 transition cursor-pointer ${
-                        activeInput === 'aadhaar' 
-                          ? 'border-kiosk-teal bg-kiosk-dark/50' 
-                          : 'border-white/5 bg-kiosk-dark/20 hover:border-slate-800'
-                      }`}
-                    >
-                      <label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest block">12-Digit Aadhaar Virtual ID</label>
-                      <input
-                        type="text"
-                        value={aadhaarNum}
-                        readOnly
-                        placeholder="Tap keypad to enter Aadhaar number"
-                        className="bg-transparent border-none outline-none p-0 text-slate-100 placeholder-slate-600 text-lg tracking-widest w-full font-bold select-none cursor-pointer"
-                      />
-                    </div>
-                  </div>
-                )}
-              </div>
-            )}
+            <div>
+              <h2 className="text-xl font-black text-gray-900">Portal Sign-In</h2>
+              <p className="text-xs text-gray-500">Access secure citizen services and dashboards</p>
+            </div>
           </div>
 
-          {/* Form Trigger submit Buttons */}
-          {!success && (
-            <div className="border-t border-white/5 pt-6 mt-8 flex justify-end gap-3.5">
-              {authMethod === 'otp' && !otpSent ? (
-                <button
-                  onClick={handleGetOtp}
-                  disabled={loading || mobileNum.length !== 10}
-                  className="px-10 py-5 bg-kiosk-teal hover:bg-opacity-95 font-black text-base rounded-[1.5rem] text-kiosk-dark transition shadow-kiosk-glow disabled:opacity-50 kiosk-btn w-full md:w-auto"
-                >
-                  {loading ? 'Sending...' : 'Generate Mobile OTP'}
-                </button>
-              ) : (
-                <div className="flex flex-col sm:flex-row gap-3 w-full md:w-auto">
-                  {otpSent && (
-                    <button
-                      onClick={() => {
-                        setOtpSent(false);
-                        setOtpVal('');
-                        setActiveInput('mobile');
-                      }}
-                      className="px-6 py-4 bg-white/5 border border-white/10 hover:bg-white/10 text-slate-300 font-bold text-xs rounded-xl flex items-center justify-center gap-1 kiosk-btn"
-                    >
-                      <RotateCcw className="w-3.5 h-3.5" /> Re-enter Mobile
-                    </button>
-                  )}
-                  <button
-                    onClick={handleVerify}
-                    disabled={loading || (authMethod === 'otp' ? otpVal.length !== 6 : aadhaarNum.length !== 12)}
-                    className="px-10 py-5 bg-kiosk-teal hover:bg-opacity-95 font-black text-base rounded-[1.5rem] text-kiosk-dark transition shadow-kiosk-glow disabled:opacity-50 kiosk-btn flex-1 md:flex-none text-center"
-                  >
-                    {loading ? 'Verifying...' : 'Verify & Log In'}
-                  </button>
-                </div>
-              )}
+          {/* Error */}
+          {errorMsg && (
+            <div className="flex items-center gap-2 p-3 mb-4 rounded-lg bg-red-50 border border-red-200 text-red-700 text-xs font-bold">
+              <AlertTriangle className="w-4 h-4 flex-shrink-0" />
+              {errorMsg}
             </div>
           )}
 
+          {/* Success */}
+          {success ? (
+            <div className="flex flex-col items-center justify-center py-12 text-center gap-3">
+              <div className="w-14 h-14 rounded-full bg-green-50 border border-green-200 flex items-center justify-center animate-bounce">
+                <CheckCircle2 className="w-7 h-7 text-green-600" />
+              </div>
+              <h3 className="font-bold text-lg text-green-700">Sign-In Successful</h3>
+              <p className="text-xs text-gray-500">Loading your secure session…</p>
+            </div>
+          ) : (
+            <div className="space-y-5">
+              {/* Tab switcher */}
+              <div className="grid grid-cols-2 gap-1 p-1 bg-gray-100 border border-gray-200 rounded-xl">
+                <button
+                  onClick={() => { setLoginType('citizen'); setErrorMsg(''); }}
+                  className={`flex items-center justify-center gap-1.5 py-2 rounded-lg text-xs font-bold transition ${loginType === 'citizen' ? 'bg-[#EA580C] text-white shadow' : 'text-gray-600 hover:text-gray-900'}`}
+                >
+                  <Smartphone className="w-4 h-4" /> Citizen
+                </button>
+                <button
+                  onClick={() => { setLoginType('staff'); setErrorMsg(''); }}
+                  className={`flex items-center justify-center gap-1.5 py-2 rounded-lg text-xs font-bold transition ${loginType === 'staff' ? 'bg-[#EA580C] text-white shadow' : 'text-gray-600 hover:text-gray-900'}`}
+                >
+                  <UserIcon className="w-4 h-4" /> Official Login
+                </button>
+              </div>
+
+              {loginType === 'citizen' ? (
+                <div className="space-y-4">
+                  {!otpSent ? (
+                    <form onSubmit={handleRequestOtp} className="space-y-4">
+                      <div>
+                        <label className="block text-xs font-bold text-gray-600 uppercase tracking-wider mb-1.5">Mobile Number</label>
+                        <div className="flex rounded-lg border border-gray-300 bg-gray-50 focus-within:border-[#EA580C] focus-within:ring-1 focus-within:ring-[#EA580C] overflow-hidden">
+                          <span className="px-3 py-2.5 text-xs font-bold text-gray-500 border-r border-gray-300 flex items-center">+91</span>
+                          <input type="tel" maxLength={10} placeholder="10-digit mobile" value={mobile} onChange={(e) => setMobile(e.target.value.replace(/\D/g, ''))}
+                            className="flex-1 bg-transparent px-3 py-2.5 text-sm text-gray-900 font-medium outline-none" required />
+                        </div>
+                      </div>
+                      <button type="submit" disabled={loading} className="w-full py-2.5 bg-[#EA580C] hover:bg-[#C2410C] text-white rounded-lg text-sm font-bold transition disabled:opacity-60">
+                        {loading ? 'Sending OTP…' : 'Generate OTP'}
+                      </button>
+                    </form>
+                  ) : (
+                    <form onSubmit={handleVerifyOtp} className="space-y-4">
+                      {demoOtp && (
+                        <div className="p-3 bg-amber-50 border border-amber-200 rounded-lg text-amber-800 text-xs font-bold">
+                          Demo OTP: <span className="font-mono underline">{demoOtp}</span>
+                        </div>
+                      )}
+                      <div>
+                        <label className="block text-xs font-bold text-gray-600 uppercase tracking-wider mb-1.5">OTP Code</label>
+                        <input type="text" maxLength={6} placeholder="6-digit OTP" value={otpVal} onChange={(e) => setOtpVal(e.target.value.replace(/\D/g, ''))}
+                          className={`${inputClass} text-center tracking-widest font-mono`} required />
+                      </div>
+                      <div className="p-4 bg-gray-50 border border-gray-200 rounded-lg space-y-3">
+                        <span className="text-[10px] font-bold text-gray-500 uppercase tracking-wider block">First-time? Add details (optional)</span>
+                        <div className="grid grid-cols-2 gap-3">
+                          <div>
+                            <label className="block text-[10px] font-bold text-gray-500 mb-1">Full Name</label>
+                            <input type="text" placeholder="Amit Kumar" value={citizenName} onChange={(e) => setCitizenName(e.target.value)}
+                              className="w-full px-3 py-2 border border-gray-200 rounded-lg bg-white text-xs font-medium text-gray-900 focus:outline-none focus:border-[#EA580C]" />
+                          </div>
+                          <div>
+                            <label className="block text-[10px] font-bold text-gray-500 mb-1">Aadhaar (12-digit)</label>
+                            <input type="text" maxLength={12} placeholder="982138294819" value={aadhaar} onChange={(e) => setAadhaar(e.target.value.replace(/\D/g, ''))}
+                              className="w-full px-3 py-2 border border-gray-200 rounded-lg bg-white text-xs font-medium text-gray-900 focus:outline-none focus:border-[#EA580C]" />
+                          </div>
+                        </div>
+                      </div>
+                      <div className="flex gap-2">
+                        <button type="button" onClick={() => setOtpSent(false)}
+                          className="flex-1 py-2.5 border border-gray-300 rounded-lg text-xs font-bold text-gray-600 hover:bg-gray-50 transition">
+                          Edit Number
+                        </button>
+                        <button type="submit" disabled={loading}
+                          className="flex-1 py-2.5 bg-green-600 hover:bg-green-700 text-white rounded-lg text-xs font-bold transition disabled:opacity-60">
+                          {loading ? 'Verifying…' : 'Verify & Log In'}
+                        </button>
+                      </div>
+                    </form>
+                  )}
+                </div>
+              ) : (
+                <form onSubmit={handleStaffLogin} className="space-y-4">
+                  <div>
+                    <label className="block text-xs font-bold text-gray-600 uppercase tracking-wider mb-1.5">Official Email</label>
+                    <div className="flex rounded-lg border border-gray-300 bg-gray-50 focus-within:border-[#EA580C] focus-within:ring-1 focus-within:ring-[#EA580C] overflow-hidden">
+                      <span className="px-3 py-2.5 text-gray-400 flex items-center border-r border-gray-200"><Mail className="w-4 h-4" /></span>
+                      <input type="email" placeholder="officer.dept@suvidha.gov.in" value={email} onChange={(e) => setEmail(e.target.value)}
+                        className="flex-1 bg-transparent px-3 py-2.5 text-sm text-gray-900 font-medium outline-none" required />
+                    </div>
+                  </div>
+                  <div>
+                    <label className="block text-xs font-bold text-gray-600 uppercase tracking-wider mb-1.5">Password</label>
+                    <div className="flex rounded-lg border border-gray-300 bg-gray-50 focus-within:border-[#EA580C] focus-within:ring-1 focus-within:ring-[#EA580C] overflow-hidden">
+                      <span className="px-3 py-2.5 text-gray-400 flex items-center border-r border-gray-200"><Lock className="w-4 h-4" /></span>
+                      <input type="password" placeholder="••••••••" value={password} onChange={(e) => setPassword(e.target.value)}
+                        className="flex-1 bg-transparent px-3 py-2.5 text-sm text-gray-900 font-mono font-medium outline-none" required />
+                    </div>
+                  </div>
+                  <button type="submit" disabled={loading}
+                    className="w-full py-2.5 bg-[#EA580C] hover:bg-[#C2410C] text-white rounded-lg text-sm font-bold transition disabled:opacity-60">
+                    {loading ? 'Logging in…' : 'Sign In as Staff'}
+                  </button>
+                </form>
+              )}
+            </div>
+          )}
         </div>
 
-        {/* Right Side: Virtual Kiosk touchscreen Keypad (Takes 2 cols) */}
-        {!success && (
-          <div className={`lg:col-span-2 p-6 rounded-[2.5rem] border shadow-kiosk-depth flex flex-col justify-center items-center transition ${
-            highContrast 
-              ? 'bg-black border-yellow-400' 
-              : 'bg-kiosk-dark/45 border-white/5 backdrop-blur-md'
-          }`}>
-            <div className="w-full text-center mb-4 select-none">
-              <span className="text-[10px] text-slate-500 font-extrabold uppercase tracking-widest">Kiosk Touch Pad</span>
-              <p className="text-xs text-slate-300 mt-0.5">Tap keys to enter numbers</p>
-            </div>
-
-            {/* Keypad Layout Grid */}
-            <div className="grid grid-cols-3 gap-3 w-full max-w-xs">
-              {['1', '2', '3', '4', '5', '6', '7', '8', '9', 'Clear', '0', '⌫'].map((k) => (
-                <button
-                  key={k}
-                  type="button"
-                  onClick={() => handleKeyPress(k)}
-                  className={`h-16 rounded-2xl text-xl font-bold flex items-center justify-center active:scale-95 transition-all kiosk-btn border ${
-                    highContrast
-                      ? 'border-yellow-400 bg-black text-yellow-400 hover:bg-yellow-400 hover:text-black font-black'
-                      : k === 'Clear' || k === '⌫'
-                        ? 'bg-white/5 border-white/10 hover:bg-white/10 text-slate-400 text-sm font-semibold'
-                        : 'bg-kiosk-navy border-slate-700/60 text-slate-100 hover:bg-kiosk-accent hover:border-kiosk-teal/40'
-                  }`}
-                >
-                  {k}
-                </button>
-              ))}
-            </div>
+        {/* ── Right: Demo Credentials ── */}
+        <div className="md:col-span-2 bg-gray-50 border border-gray-200 rounded-2xl p-6 flex flex-col gap-5">
+          <div>
+            <h4 className="font-extrabold text-xs text-gray-900 uppercase tracking-wider flex items-center gap-1.5 mb-1">
+              <KeyRound className="w-4 h-4 text-[#EA580C]" />
+              Developer Credentials
+            </h4>
+            <p className="text-[11px] text-gray-500 leading-relaxed">Pre-fill mock government credentials to test role workflows.</p>
           </div>
-        )}
 
+          <div className="space-y-2">
+            {[
+              { label: 'Citizen (OTP)', sub: '9876543210', key: 'citizen_user' },
+              { label: 'Electricity Officer', sub: 'officer.elec@…', key: 'elec_officer' },
+              { label: 'Water Officer', sub: 'officer.water@…', key: 'water_officer' },
+              { label: 'Super Admin', sub: 'admin@suvidha…', key: 'admin' },
+            ].map(cred => (
+              <button
+                key={cred.key}
+                onClick={() => handleQuickPrefill(cred.key)}
+                className="w-full px-3 py-2.5 bg-white hover:bg-orange-50 border border-gray-200 hover:border-[#EA580C] rounded-lg text-left text-xs font-bold text-gray-700 transition flex justify-between items-center"
+              >
+                <span>{cred.label}</span>
+                <span className="text-[10px] text-[#EA580C] font-semibold">{cred.sub}</span>
+              </button>
+            ))}
+          </div>
+
+          <div className="p-3 bg-orange-50 border border-orange-100 rounded-lg text-[10px] text-gray-600 leading-relaxed font-medium">
+            <b className="text-gray-900">Default passwords:</b> Staff → <code className="bg-white px-1 py-0.5 rounded border border-gray-200 text-[#EA580C] font-mono">officer123</code> &nbsp;|&nbsp; Admin → <code className="bg-white px-1 py-0.5 rounded border border-gray-200 text-[#EA580C] font-mono">admin123</code>
+          </div>
+        </div>
       </div>
-      
     </div>
   );
 };

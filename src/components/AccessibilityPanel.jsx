@@ -1,120 +1,82 @@
 import React, { useState } from 'react';
 import { useAccessibility } from '../context/AccessibilityContext';
 import { useLanguage } from '../context/LanguageContext';
-import { 
-  Eye, 
-  Volume2, 
-  VolumeX, 
-  Type, 
-  Mic, 
-  Settings, 
-  Activity 
-} from 'lucide-react';
+import { Eye, Volume2, VolumeX, Type, Mic, Settings, Activity } from 'lucide-react';
 
 export const AccessibilityPanel = () => {
-  const { 
-    textScale, 
-    setTextScale, 
-    highContrast, 
-    setHighContrast, 
-    screenReader, 
-    setScreenReader, 
-    voiceNav, 
+  const {
+    textScale,
+    setTextScale,
+    highContrast,
+    setHighContrast,
+    screenReader,
+    setScreenReader,
+    voiceNav,
     setVoiceNav,
     speakElement
   } = useAccessibility();
-  
+
   const { t } = useLanguage();
   const [isOpen, setIsOpen] = useState(false);
-
-  const togglePanel = (e) => {
-    speakElement(e, isOpen ? "Close accessibility panel" : "Open accessibility panel");
-    setIsOpen(!isOpen);
-  };
 
   const handleTextScaleChange = (scale, e) => {
     setTextScale(scale);
     speakElement(e, `Text size set to ${scale}`);
   };
 
-  const handleContrastToggle = (e) => {
-    setHighContrast(!highContrast);
-    speakElement(e, `High contrast mode turned ${!highContrast ? 'on' : 'off'}`);
-  };
-
-  const handleReaderToggle = (e) => {
-    const nextVal = !screenReader;
-    setScreenReader(nextVal);
-    // Directly speak to test
-    if (nextVal) {
-      setTimeout(() => {
-        if (window.speechSynthesis) {
-          window.speechSynthesis.cancel();
-          const u = new SpeechSynthesisUtterance("Screen reader voice assistance enabled.");
-          window.speechSynthesis.speak(u);
-        }
-      }, 100);
+  const handleContrastToggle = () => setHighContrast(!highContrast);
+  const handleReaderToggle = () => {
+    const next = !screenReader;
+    setScreenReader(next);
+    if (next && window.speechSynthesis) {
+      window.speechSynthesis.cancel();
+      const u = new SpeechSynthesisUtterance('Screen reader enabled.');
+      window.speechSynthesis.speak(u);
     }
   };
-
-  const handleVoiceNavToggle = (e) => {
-    setVoiceNav(!voiceNav);
-    speakElement(e, `Voice command routing turned ${!voiceNav ? 'on' : 'off'}`);
-  };
+  const handleVoiceNavToggle = () => setVoiceNav(!voiceNav);
 
   return (
     <div className="relative z-50">
-      {/* Floating Panel Toggle button */}
       <button
-        onClick={togglePanel}
-        onMouseEnter={speakElement}
-        className={`flex items-center gap-2 px-5 py-3 rounded-full text-base font-bold transition-all duration-300 shadow-kiosk-depth kiosk-btn ${
-          highContrast 
-            ? 'bg-yellow-400 text-black border-2 border-black font-black' 
-            : 'bg-kiosk-accent text-slate-100 hover:bg-slate-700 border border-white/10'
-        }`}
+        onClick={() => setIsOpen(!isOpen)}
+        className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold border border-gray-200 bg-gray-50 hover:bg-orange-50 hover:border-orange-300 text-gray-700 hover:text-[#EA580C] transition-all"
         aria-label="Accessibility options"
       >
-        <Settings className="w-5 h-5 text-kiosk-teal animate-spin-slow" />
-        <span>{t('accessibilityMode')}</span>
+        <Settings className="w-3.5 h-3.5" />
+        <span className="hidden sm:inline">{t('accessibilityMode')}</span>
       </button>
 
-      {/* Panel Dropdown */}
       {isOpen && (
-        <div className={`absolute right-0 mt-3 p-6 w-80 rounded-2xl shadow-kiosk-depth border transition-all duration-300 ${
-          highContrast 
-            ? 'bg-black text-yellow-400 border-yellow-400' 
-            : 'bg-kiosk-navy/95 backdrop-blur-xl border-slate-700 text-slate-100'
-        }`}>
-          <div className="flex items-center justify-between pb-4 border-b border-white/10 mb-4">
-            <h3 className="font-outfit font-bold text-lg flex items-center gap-2">
-              <Activity className="w-5 h-5 text-kiosk-teal" />
+        <div className="absolute right-0 mt-2 w-72 bg-white border border-gray-200 rounded-xl shadow-xl p-4 z-50">
+          <div className="flex items-center justify-between mb-3 pb-3 border-b border-gray-100">
+            <h3 className="font-bold text-sm text-gray-900 flex items-center gap-1.5">
+              <Activity className="w-4 h-4 text-[#EA580C]" />
               Accessibility Tools
             </h3>
-            <button 
+            <button
               onClick={() => setIsOpen(false)}
-              className="text-xs opacity-75 hover:opacity-100 underline px-2 py-1"
+              className="text-xs font-bold text-gray-400 hover:text-gray-700 underline"
             >
               Done
             </button>
           </div>
 
-          <div className="space-y-5">
-            {/* 1. Text Scale */}
+          <div className="space-y-4">
+            {/* Text Scale */}
             <div>
-              <label className="block text-xs font-bold uppercase tracking-wider mb-2 opacity-80 flex items-center gap-1.5">
-                <Type className="w-4 h-4" />
-                {t('textScale')}
+              <label className="block text-[10px] font-extrabold uppercase tracking-wider text-gray-500 mb-1.5 flex items-center gap-1">
+                <Type className="w-3.5 h-3.5 text-[#EA580C]" /> Text Size
               </label>
-              <div className="grid grid-cols-3 gap-2">
-                {['normal', 'large', 'extra'].map((scale) => (
+              <div className="grid grid-cols-3 gap-1.5">
+                {['normal', 'large', 'extra'].map(scale => (
                   <button
                     key={scale}
                     onClick={(e) => handleTextScaleChange(scale, e)}
-                    className={`px-3 py-1.5 rounded-lg text-xs font-bold border transition-all duration-150 capitalize ${
+                    className={`py-1.5 rounded-lg text-xs font-bold border transition capitalize ${
                       textScale === scale
-                        ? (highContrast ? 'bg-yellow-400 text-black border-yellow-400' : 'bg-kiosk-teal text-kiosk-dark border-kiosk-teal')
-                        : (highContrast ? 'bg-black text-yellow-400 border-yellow-400' : 'bg-white/5 border-white/10 text-slate-300 hover:bg-white/10')
+                        ? 'bg-[#EA580C] text-white border-[#EA580C]'
+                        : 'bg-gray-50 text-gray-700 border-gray-200 hover:border-orange-300 hover:text-[#EA580C]'
                     }`}
                   >
                     {scale === 'extra' ? 'X-Large' : scale}
@@ -123,59 +85,22 @@ export const AccessibilityPanel = () => {
               </div>
             </div>
 
-            {/* 2. High Contrast */}
-            <div className="flex items-center justify-between">
-              <span className="text-sm font-semibold flex items-center gap-2">
-                <Eye className="w-4 h-4 text-kiosk-teal" />
-                {t('highContrast')}
-              </span>
-              <button
-                onClick={handleContrastToggle}
-                className={`w-12 h-6 flex items-center rounded-full p-1 transition-all duration-200 ${
-                  highContrast ? 'bg-yellow-400' : 'bg-slate-700'
-                }`}
-              >
-                <div className={`w-4 h-4 rounded-full shadow-md transform transition-transform duration-200 ${
-                  highContrast ? 'translate-x-6 bg-black' : 'bg-white'
-                }`} />
-              </button>
-            </div>
-
-            {/* 3. Screen Reader (TTS) */}
-            <div className="flex items-center justify-between">
-              <span className="text-sm font-semibold flex items-center gap-2">
-                {screenReader ? <Volume2 className="w-4 h-4 text-kiosk-teal" /> : <VolumeX className="w-4 h-4 text-slate-500" />}
-                {t('screenReader')}
-              </span>
-              <button
-                onClick={handleReaderToggle}
-                className={`w-12 h-6 flex items-center rounded-full p-1 transition-all duration-200 ${
-                  screenReader ? 'bg-kiosk-teal' : 'bg-slate-700'
-                }`}
-              >
-                <div className={`w-4 h-4 rounded-full shadow-md transform transition-transform duration-200 ${
-                  screenReader ? 'translate-x-6 bg-kiosk-dark' : 'bg-white'
-                }`} />
-              </button>
-            </div>
-
-            {/* 4. Voice Navigation */}
-            <div className="flex items-center justify-between">
-              <span className="text-sm font-semibold flex items-center gap-2">
-                <Mic className="w-4 h-4 text-kiosk-teal" />
-                {t('voiceNav')}
-              </span>
-              <button
-                onClick={handleVoiceNavToggle}
-                className={`w-12 h-6 flex items-center rounded-full p-1 transition-all duration-200 ${
-                  voiceNav ? 'bg-kiosk-teal' : 'bg-slate-700'
-                }`}
-              >
-                <div className={`w-4 h-4 rounded-full shadow-md transform transition-transform duration-200 ${
-                  voiceNav ? 'translate-x-6 bg-kiosk-dark' : 'bg-white'
-                }`} />
-              </button>
-            </div>
+            {/* Toggles */}
+            {[
+              { label: 'High Contrast', icon: <Eye className="w-4 h-4 text-[#EA580C]" />, value: highContrast, toggle: handleContrastToggle },
+              { label: 'Screen Reader', icon: screenReader ? <Volume2 className="w-4 h-4 text-[#EA580C]" /> : <VolumeX className="w-4 h-4 text-gray-400" />, value: screenReader, toggle: handleReaderToggle },
+              { label: 'Voice Navigation', icon: <Mic className="w-4 h-4 text-[#EA580C]" />, value: voiceNav, toggle: handleVoiceNavToggle },
+            ].map(({ label, icon, value, toggle }) => (
+              <div key={label} className="flex items-center justify-between pt-3 border-t border-gray-100">
+                <span className="text-xs font-semibold text-gray-700 flex items-center gap-2">{icon}{label}</span>
+                <button
+                  onClick={toggle}
+                  className={`w-10 h-5 rounded-full p-0.5 transition-colors flex items-center ${value ? 'bg-[#EA580C]' : 'bg-gray-300'}`}
+                >
+                  <div className={`w-4 h-4 rounded-full bg-white shadow transition-transform ${value ? 'translate-x-5' : 'translate-x-0'}`} />
+                </button>
+              </div>
+            ))}
           </div>
         </div>
       )}

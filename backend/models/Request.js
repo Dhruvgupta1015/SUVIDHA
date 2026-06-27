@@ -18,15 +18,39 @@ const requestSchema = new mongoose.Schema({
     required: [true, 'Please specify the service category (electricity, water, gas, waste, general)'],
     enum: ['electricity', 'water', 'gas', 'waste', 'general']
   },
+  subService: {
+    type: String,
+    required: [true, 'Please specify sub-service details']
+  },
+  description: {
+    type: String,
+    required: [true, 'Please enter request/complaint description details'],
+    trim: true
+  },
   status: {
     type: String,
-    enum: ['Pending', 'In-Progress', 'Approved', 'Rejected', 'Completed', 'Escalated'],
+    enum: ['Pending', 'In-Progress', 'Approved', 'Rejected', 'Completed'],
     default: 'Pending'
   },
   assignedDepartment: {
     type: String,
     trim: true,
-    default: 'Nodal Dispatch Cell'
+    default: 'General Administration'
+  },
+  assignedTeam: {
+    type: String,
+    trim: true,
+    default: 'Unassigned'
+  },
+  remarks: {
+    type: String,
+    trim: true,
+    default: ''
+  },
+  priority: {
+    type: String,
+    enum: ['Standard', 'High', 'Critical'],
+    default: 'Standard'
   },
   documents: [
     {
