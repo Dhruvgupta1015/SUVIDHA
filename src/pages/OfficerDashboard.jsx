@@ -21,7 +21,7 @@ const priorityBadge = (p) => {
 };
 
 const serviceIcon = (type) => ({
-  electricity: <Zap className="w-4 h-4 text-[#1D4ED8]" />,
+  electricity: <Zap className="w-4 h-4 text-[#2563EB]" />,
   water:       <Droplet className="w-4 h-4 text-cyan-600" />,
   gas:         <Flame className="w-4 h-4 text-orange-500" />,
   waste:       <Trash2 className="w-4 h-4 text-green-600" />,
@@ -166,7 +166,7 @@ export const OfficerDashboard = () => {
         <div className="bg-white border border-gray-200 rounded-2xl p-5 flex flex-col sm:flex-row sm:items-center justify-between gap-4 shadow-sm">
           <div className="flex items-center gap-4">
             <div className="w-12 h-12 rounded-xl bg-blue-50 border border-blue-100 flex items-center justify-center flex-shrink-0">
-              <Building2 className="w-6 h-6 text-[#1D4ED8]" />
+              <Building2 className="w-6 h-6 text-[#2563EB]" />
             </div>
             <div>
               <div className="flex items-center gap-2 flex-wrap">
@@ -182,7 +182,7 @@ export const OfficerDashboard = () => {
               <p className="text-xs text-gray-500 mt-0.5">
                 Officer Console · <strong className="text-gray-700">{currentOfficer.name}</strong>
                 <span className="mx-2 text-gray-300">|</span>
-                <span className="text-[#1D4ED8] font-medium">{currentOfficer.email}</span>
+                <span className="text-[#2563EB] font-medium">{currentOfficer.email}</span>
               </p>
             </div>
           </div>
@@ -306,7 +306,7 @@ export const OfficerDashboard = () => {
           {/* Table */}
           {loading && allRequests.length === 0 ? (
             <div className="gov-card p-10 text-center text-xs text-gray-400">
-              <div className="w-6 h-6 border-2 border-blue-200 border-t-[#1D4ED8] rounded-full animate-spin mx-auto mb-2" />
+              <div className="w-6 h-6 border-2 border-blue-200 border-t-[#2563EB] rounded-full animate-spin mx-auto mb-2" />
               Loading department registry…
             </div>
           ) : filteredRequests.length === 0 ? (
@@ -334,11 +334,11 @@ export const OfficerDashboard = () => {
                         onClick={() => handleSelectRequest(req)}
                         className={`cursor-pointer transition ${
                           selectedRequest?.requestId === req.requestId
-                            ? 'bg-blue-50/40 border-l-2 border-l-[#1D4ED8]'
+                            ? 'bg-blue-50/40 border-l-2 border-l-[#2563EB]'
                             : 'hover:bg-gray-50'
                         }`}
                       >
-                        <td className="px-4 py-3 font-mono font-bold text-[#1D4ED8]">{req.requestId}</td>
+                        <td className="px-4 py-3 font-mono font-bold text-[#2563EB]">{req.requestId}</td>
                         <td className="px-4 py-3">
                           <div className="font-semibold text-gray-900">{req.citizenId?.name || 'Aadhaar User'}</div>
                           <div className="text-[10px] text-gray-400">+91 {req.citizenId?.mobile}</div>
@@ -411,7 +411,7 @@ export const OfficerDashboard = () => {
               {/* Action form */}
               <div className="gov-card p-5">
                 <h4 className="font-black text-sm text-gray-900 mb-4 flex items-center gap-2" style={{ fontFamily: 'Outfit, sans-serif' }}>
-                  <Send className="w-4 h-4 text-[#1D4ED8]" />
+                  <Send className="w-4 h-4 text-[#2563EB]" />
                   Update Ticket Status
                 </h4>
 

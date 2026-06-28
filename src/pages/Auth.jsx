@@ -100,9 +100,9 @@ export const Auth = () => {
 
   const quickCredentials = [
     { label: 'Citizen User', sub: 'Mobile: 9876543210', key: 'citizen_user', icon: <UserIcon className="w-3.5 h-3.5 text-green-600" />, color: 'text-green-700' },
-    { label: 'Electricity Officer', sub: 'officer.elec@…', key: 'elec_officer', icon: <Building2 className="w-3.5 h-3.5 text-[#1D4ED8]" />, color: 'text-blue-700' },
-    { label: 'Water Officer', sub: 'officer.water@…', key: 'water_officer', icon: <Building2 className="w-3.5 h-3.5 text-[#1D4ED8]" />, color: 'text-blue-700' },
-    { label: 'Super Admin', sub: 'admin@suvidha…', key: 'admin', icon: <Shield className="w-3.5 h-3.5 text-[#1D4ED8]" />, color: 'text-[#1D4ED8]' },
+    { label: 'Electricity Officer', sub: 'officer.elec@…', key: 'elec_officer', icon: <Building2 className="w-3.5 h-3.5 text-[#2563EB]" />, color: 'text-blue-700' },
+    { label: 'Water Officer', sub: 'officer.water@…', key: 'water_officer', icon: <Building2 className="w-3.5 h-3.5 text-[#2563EB]" />, color: 'text-blue-700' },
+    { label: 'Super Admin', sub: 'admin@suvidha…', key: 'admin', icon: <Shield className="w-3.5 h-3.5 text-[#2563EB]" />, color: 'text-[#2563EB]' },
   ];
 
   return (
@@ -115,7 +115,7 @@ export const Auth = () => {
           {/* Header */}
           <div className="flex items-center gap-4 mb-7 pb-6 border-b border-gray-100">
             <div className="w-12 h-12 rounded-xl bg-blue-50 border border-blue-100 flex items-center justify-center flex-shrink-0">
-              <ShieldCheck className="w-6 h-6 text-[#1D4ED8]" />
+              <ShieldCheck className="w-6 h-6 text-[#2563EB]" />
             </div>
             <div>
               <h2 className="text-xl font-black text-gray-900" style={{ fontFamily: 'Outfit, sans-serif' }}>
@@ -162,7 +162,7 @@ export const Auth = () => {
                   onClick={() => { setLoginType('citizen'); setErrorMsg(''); }}
                   className={`flex items-center justify-center gap-2 py-2.5 rounded-lg text-sm font-bold transition ${
                     loginType === 'citizen'
-                      ? 'bg-[#1D4ED8] text-white shadow-sm'
+                      ? 'bg-[#2563EB] text-white shadow-sm'
                       : 'text-gray-600 hover:text-gray-900 hover:bg-white'
                   }`}
                 >
@@ -173,7 +173,7 @@ export const Auth = () => {
                   onClick={() => { setLoginType('staff'); setErrorMsg(''); }}
                   className={`flex items-center justify-center gap-2 py-2.5 rounded-lg text-sm font-bold transition ${
                     loginType === 'staff'
-                      ? 'bg-[#1D4ED8] text-white shadow-sm'
+                      ? 'bg-[#2563EB] text-white shadow-sm'
                       : 'text-gray-600 hover:text-gray-900 hover:bg-white'
                   }`}
                 >
@@ -189,7 +189,7 @@ export const Auth = () => {
                     <form onSubmit={handleRequestOtp} className="space-y-4">
                       <div>
                         <label className="section-label block mb-2">Mobile Number</label>
-                        <div className="flex rounded-xl border-2 border-gray-200 bg-gray-50 focus-within:border-[#1D4ED8] focus-within:shadow-[0_0_0_3px_rgba(29,78,216,0.12)] overflow-hidden transition-all">
+                        <div className="flex rounded-xl border-2 border-gray-200 bg-gray-50 focus-within:border-[#2563EB] focus-within:shadow-[0_0_0_3px_rgba(29,78,216,0.12)] overflow-hidden transition-all">
                           <span className="px-3.5 py-3 text-sm font-bold text-gray-500 border-r border-gray-200 flex items-center bg-gray-100">+91</span>
                           <input
                             type="tel"
@@ -291,7 +291,7 @@ export const Auth = () => {
                 <form onSubmit={handleStaffLogin} className="space-y-4">
                   <div>
                     <label className="section-label block mb-2">Official Email ID</label>
-                    <div className="flex rounded-xl border-2 border-gray-200 bg-gray-50 focus-within:border-[#1D4ED8] focus-within:shadow-[0_0_0_3px_rgba(29,78,216,0.12)] overflow-hidden transition-all">
+                    <div className="flex rounded-xl border-2 border-gray-200 bg-gray-50 focus-within:border-[#2563EB] focus-within:shadow-[0_0_0_3px_rgba(29,78,216,0.12)] overflow-hidden transition-all">
                       <span className="px-3.5 py-3 text-gray-400 flex items-center border-r border-gray-200 bg-gray-100">
                         <Mail className="w-4 h-4" />
                       </span>
@@ -308,7 +308,7 @@ export const Auth = () => {
 
                   <div>
                     <label className="section-label block mb-2">Password</label>
-                    <div className="flex rounded-xl border-2 border-gray-200 bg-gray-50 focus-within:border-[#1D4ED8] focus-within:shadow-[0_0_0_3px_rgba(29,78,216,0.12)] overflow-hidden transition-all">
+                    <div className="flex rounded-xl border-2 border-gray-200 bg-gray-50 focus-within:border-[#2563EB] focus-within:shadow-[0_0_0_3px_rgba(29,78,216,0.12)] overflow-hidden transition-all">
                       <span className="px-3.5 py-3 text-gray-400 flex items-center border-r border-gray-200 bg-gray-100">
                         <Lock className="w-4 h-4" />
                       </span>
@@ -352,7 +352,7 @@ export const Auth = () => {
 
           <div className="bg-white border border-gray-200 rounded-2xl shadow-sm p-6">
             <div className="flex items-center gap-2 mb-4">
-              <KeyRound className="w-4 h-4 text-[#1D4ED8]" />
+              <KeyRound className="w-4 h-4 text-[#2563EB]" />
               <h4 className="font-black text-sm text-gray-900 uppercase tracking-wider">Demo Credentials</h4>
             </div>
             <p className="text-xs text-gray-500 mb-4 leading-relaxed">
@@ -364,7 +364,7 @@ export const Auth = () => {
                 <button
                   key={cred.key}
                   onClick={() => handleQuickPrefill(cred.key)}
-                  className="w-full px-3.5 py-3 bg-gray-50 hover:bg-blue-50 border border-gray-200 hover:border-[#1D4ED8] rounded-xl text-left text-xs font-semibold text-gray-700 transition flex items-center justify-between group"
+                  className="w-full px-3.5 py-3 bg-gray-50 hover:bg-blue-50 border border-gray-200 hover:border-[#2563EB] rounded-xl text-left text-xs font-semibold text-gray-700 transition flex items-center justify-between group"
                 >
                   <div className="flex items-center gap-2">
                     {cred.icon}
@@ -372,7 +372,7 @@ export const Auth = () => {
                   </div>
                   <div className="flex items-center gap-1.5">
                     <span className={`text-[10px] font-semibold ${cred.color}`}>{cred.sub}</span>
-                    <ArrowRight className="w-3 h-3 text-gray-300 group-hover:text-[#1D4ED8] transition" />
+                    <ArrowRight className="w-3 h-3 text-gray-300 group-hover:text-[#2563EB] transition" />
                   </div>
                 </button>
               ))}

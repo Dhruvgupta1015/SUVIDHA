@@ -3,33 +3,36 @@
 @config "../tailwind.config.js";
 
 /* ============================================================
-   SUVIDHA Design Tokens — Government Blue + White Theme
-   Primary: #1D4ED8  |  White: #FFFFFF  |  Gray: #F3F4F6
-   Green:  #16A34A   |  Dark:  #111827
+   SUVIDHA Design Tokens — Premium Government Portal Theme
+   Primary Navy:  #1E3A8A  |  Primary Blue: #2563EB
+   Background:    #F8FAFC  |  Card White:   #FFFFFF
+   Border Gray:   #E2E8F0  |  Success:      #16A34A
+   Dark Text:     #0F172A  |  Muted Text:   #475569
    ============================================================ */
 :root {
-  --color-primary:       #1D4ED8;
+  --color-primary:       #2563EB;
   --color-primary-dark:  #1E3A8A;
   --color-primary-light: #DBEAFE;
+  --color-primary-mid:   #1D4ED8;
   --color-green:         #16A34A;
   --color-green-light:   #DCFCE7;
   --color-red:           #DC2626;
   --color-red-light:     #FEE2E2;
   --color-amber:         #D97706;
   --color-amber-light:   #FEF3C7;
-  --color-bg:            #F3F4F6;
+  --color-bg:            #F8FAFC;
   --color-surface:       #FFFFFF;
-  --color-border:        #E5E7EB;
-  --color-border-dark:   #D1D5DB;
-  --color-text:          #111827;
-  --color-text-muted:    #6B7280;
-  --color-text-subtle:   #9CA3AF;
+  --color-border:        #E2E8F0;
+  --color-border-dark:   #CBD5E1;
+  --color-text:          #0F172A;
+  --color-text-muted:    #475569;
+  --color-text-subtle:   #94A3B8;
 }
 
 /* ── Force light mode always ── */
 .light, .dark {
-  --color-primary:      #1D4ED8;
-  --color-bg:           #F3F4F6;
+  --color-primary:      #2563EB;
+  --color-bg:           #F8FAFC;
   --color-surface:      #FFFFFF;
 }
 
@@ -94,16 +97,16 @@
    ============================================================ */
 @layer utilities {
 
-  /* Government card — white surface with subtle shadow */
+  /* Government card — clean white surface with soft shadow */
   .gov-card {
     background: var(--color-surface);
     border: 1px solid var(--color-border);
-    border-radius: 12px;
-    box-shadow: 0 1px 3px rgba(0,0,0,0.06), 0 1px 2px rgba(0,0,0,0.04);
-    transition: box-shadow 0.2s ease, border-color 0.2s ease;
+    border-radius: 14px;
+    box-shadow: 0 1px 4px rgba(15,23,42,0.05), 0 1px 2px rgba(15,23,42,0.03);
+    transition: box-shadow 0.25s ease, border-color 0.25s ease, transform 0.2s ease;
   }
   .gov-card:hover {
-    box-shadow: 0 4px 12px rgba(0,0,0,0.08);
+    box-shadow: 0 6px 20px rgba(15,23,42,0.08), 0 2px 6px rgba(15,23,42,0.04);
     border-color: var(--color-border-dark);
   }
 
@@ -122,12 +125,12 @@
     border: none;
     cursor: pointer;
     transition: background 0.15s ease, transform 0.1s ease, box-shadow 0.15s ease;
-    box-shadow: 0 1px 3px rgba(29,78,216,0.3);
+    box-shadow: 0 1px 3px rgba(37,99,235,0.25);
     user-select: none;
   }
   .btn-primary:hover {
     background: var(--color-primary-dark);
-    box-shadow: 0 4px 12px rgba(29,78,216,0.35);
+    box-shadow: 0 4px 14px rgba(37,99,235,0.3);
   }
   .btn-primary:active { transform: scale(0.98); }
   .btn-primary:disabled { opacity: 0.55; cursor: not-allowed; }
@@ -144,13 +147,14 @@
     font-weight: 700;
     font-size: 0.875rem;
     border-radius: 8px;
-    border: 2px solid var(--color-primary);
+    border: 1.5px solid var(--color-primary);
     cursor: pointer;
     transition: background 0.15s ease, color 0.15s ease;
     user-select: none;
   }
   .btn-outline:hover {
-    background: var(--color-primary-light);
+    background: #EFF6FF;
+    border-color: var(--color-primary-dark);
   }
   .btn-outline:active { transform: scale(0.98); }
 
@@ -368,7 +372,7 @@ html.high-contrast a:hover * {
    Hero gradient overlay
    ============================================================ */
 .hero-gradient {
-  background: linear-gradient(135deg, #1E3A8A 0%, #1D4ED8 50%, #2563EB 100%);
+  background: linear-gradient(135deg, #1E3A8A 0%, #2563EB 100%);
 }
 
 /* ============================================================

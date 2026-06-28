@@ -28,7 +28,7 @@ const priorityBadge = (p) => {
 };
 
 const serviceIconMap = {
-  electricity: <Zap className="w-4 h-4 text-[#1D4ED8]" />,
+  electricity: <Zap className="w-4 h-4 text-[#2563EB]" />,
   water:       <Droplet className="w-4 h-4 text-cyan-600" />,
   gas:         <Flame className="w-4 h-4 text-orange-500" />,
   waste:       <Trash2 className="w-4 h-4 text-green-600" />,
@@ -218,7 +218,7 @@ export const CitizenDashboard = () => {
             </button>
             <button
               onClick={() => setActiveTab('apply')}
-              className="flex items-center gap-2 px-5 py-2.5 bg-white text-[#1D4ED8] font-black text-sm rounded-xl hover:bg-blue-50 transition shadow"
+              className="flex items-center gap-2 px-5 py-2.5 bg-white text-[#2563EB] font-black text-sm rounded-xl hover:bg-blue-50 transition shadow"
             >
               <PlusCircle className="w-4 h-4" />
               Apply New Service
@@ -230,7 +230,7 @@ export const CitizenDashboard = () => {
       {/* ══ Stats Strip ══ */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
         {[
-          { label: 'Total Requests', value: stats.total,    icon: <FileText className="w-4 h-4" />,    color: 'text-[#1D4ED8] bg-blue-50 border-blue-100' },
+          { label: 'Total Requests', value: stats.total,    icon: <FileText className="w-4 h-4" />,    color: 'text-[#2563EB] bg-blue-50 border-blue-100' },
           { label: 'Pending',        value: stats.pending,  icon: <Clock className="w-4 h-4" />,        color: 'text-amber-600 bg-amber-50 border-amber-100' },
           { label: 'In Progress',    value: stats.active,   icon: <TrendingUp className="w-4 h-4" />,   color: 'text-blue-600 bg-blue-50 border-blue-100' },
           { label: 'Resolved',       value: stats.resolved, icon: <CheckCircle className="w-4 h-4" />,  color: 'text-green-600 bg-green-50 border-green-100' },
@@ -272,7 +272,7 @@ export const CitizenDashboard = () => {
                 <span className="text-sm whitespace-nowrap">{tab.label}</span>
               </div>
               {tab.badge !== undefined && (
-                <span className={`text-[10px] font-black px-1.5 py-0.5 rounded-full ${activeTab === tab.id ? 'bg-[#1D4ED8] text-white' : 'bg-gray-100 text-gray-600'}`}>
+                <span className={`text-[10px] font-black px-1.5 py-0.5 rounded-full ${activeTab === tab.id ? 'bg-[#2563EB] text-white' : 'bg-gray-100 text-gray-600'}`}>
                   {tab.badge}
                 </span>
               )}
@@ -290,7 +290,7 @@ export const CitizenDashboard = () => {
             <div className="md:col-span-2 space-y-3">
               <div className="flex items-center justify-between">
                 <h3 className="section-label text-gray-700">Application Log ({filteredRequests.length})</h3>
-                <button onClick={() => fetchMyRequests(true)} className="text-[#1D4ED8] text-xs font-bold hover:underline flex items-center gap-1">
+                <button onClick={() => fetchMyRequests(true)} className="text-[#2563EB] text-xs font-bold hover:underline flex items-center gap-1">
                   <RefreshCw className={`w-3 h-3 ${refreshing ? 'animate-spin' : ''}`} /> Refresh
                 </button>
               </div>
@@ -309,14 +309,14 @@ export const CitizenDashboard = () => {
 
               {loading && myRequests.length === 0 ? (
                 <div className="gov-card p-8 text-center text-xs text-gray-400">
-                  <div className="w-6 h-6 border-2 border-blue-200 border-t-[#1D4ED8] rounded-full animate-spin mx-auto mb-2" />
+                  <div className="w-6 h-6 border-2 border-blue-200 border-t-[#2563EB] rounded-full animate-spin mx-auto mb-2" />
                   Loading your requests…
                 </div>
               ) : filteredRequests.length === 0 ? (
                 <div className="gov-card p-8 text-center text-xs text-gray-400 space-y-2">
                   <FileText className="w-8 h-8 text-gray-200 mx-auto" />
                   <p className="font-medium">No requests found.</p>
-                  <button onClick={() => setActiveTab('apply')} className="text-[#1D4ED8] font-bold hover:underline">
+                  <button onClick={() => setActiveTab('apply')} className="text-[#2563EB] font-bold hover:underline">
                     + Apply for a service
                   </button>
                 </div>
@@ -328,7 +328,7 @@ export const CitizenDashboard = () => {
                       onClick={() => setSelectedRequest(req)}
                       className={`gov-card p-4 cursor-pointer transition-all ${
                         selectedRequest?.requestId === req.requestId
-                          ? 'border-[#1D4ED8] bg-blue-50/30 shadow-sm'
+                          ? 'border-[#2563EB] bg-blue-50/30 shadow-sm'
                           : 'hover:border-gray-300'
                       }`}
                     >
@@ -431,7 +431,7 @@ export const CitizenDashboard = () => {
                             step.done ? 'bg-green-500' : 'bg-gray-300'
                           }`} />
                           <div className={`pb-1 ${step.highlight ? 'bg-blue-50 border border-blue-100 rounded-xl p-3 w-full' : ''}`}>
-                            <h5 className={`font-bold text-sm ${step.highlight ? 'text-[#1D4ED8]' : 'text-gray-800'}`}>{step.title}</h5>
+                            <h5 className={`font-bold text-sm ${step.highlight ? 'text-[#2563EB]' : 'text-gray-800'}`}>{step.title}</h5>
                             <p className="text-xs text-gray-500 mt-0.5 leading-relaxed">{step.sub}</p>
                           </div>
                         </div>
@@ -476,7 +476,7 @@ export const CitizenDashboard = () => {
                   <label className="section-label text-gray-600 block mb-3">Select Service Department</label>
                   <div className="grid grid-cols-2 sm:grid-cols-5 gap-2.5">
                     {[
-                      { id: 'electricity', label: 'Electricity', icon: <Zap className="w-5 h-5 text-[#1D4ED8]" />,     bg: 'bg-blue-50' },
+                      { id: 'electricity', label: 'Electricity', icon: <Zap className="w-5 h-5 text-[#2563EB]" />,     bg: 'bg-blue-50' },
                       { id: 'water',       label: 'Water',       icon: <Droplet className="w-5 h-5 text-cyan-600" />,   bg: 'bg-cyan-50' },
                       { id: 'gas',         label: 'PNG Gas',     icon: <Flame className="w-5 h-5 text-orange-500" />,   bg: 'bg-orange-50' },
                       { id: 'waste',       label: 'Waste',       icon: <Trash2 className="w-5 h-5 text-green-600" />,   bg: 'bg-green-50' },
@@ -488,7 +488,7 @@ export const CitizenDashboard = () => {
                         onClick={() => handleCategoryChange(item.id)}
                         className={`p-3.5 rounded-xl border-2 flex flex-col items-center justify-center gap-2 transition ${
                           serviceType === item.id
-                            ? 'border-[#1D4ED8] bg-blue-50 shadow-sm'
+                            ? 'border-[#2563EB] bg-blue-50 shadow-sm'
                             : 'border-gray-200 bg-white hover:border-gray-300'
                         }`}
                       >
@@ -548,7 +548,7 @@ export const CitizenDashboard = () => {
                       type="button"
                       onClick={() => fileInputRef.current.click()}
                       disabled={uploading}
-                      className="flex items-center gap-2 px-4 py-2.5 border-2 border-dashed border-blue-300 bg-blue-50 hover:bg-blue-100 text-[#1D4ED8] rounded-xl text-sm font-bold transition"
+                      className="flex items-center gap-2 px-4 py-2.5 border-2 border-dashed border-blue-300 bg-blue-50 hover:bg-blue-100 text-[#2563EB] rounded-xl text-sm font-bold transition"
                     >
                       <UploadCloud className="w-4 h-4" />
                       {uploading ? 'Uploading…' : 'Upload PDF / Image'}
@@ -613,7 +613,7 @@ export const CitizenDashboard = () => {
               {vaultDocs.map((doc, i) => (
                 <div key={i} className="flex items-center gap-4 p-4 rounded-xl border border-gray-100 bg-gray-50 hover:bg-white hover:border-gray-200 transition">
                   <div className="w-10 h-10 rounded-xl bg-white border border-gray-200 flex items-center justify-center flex-shrink-0 shadow-sm">
-                    <FileText className="w-5 h-5 text-[#1D4ED8]" />
+                    <FileText className="w-5 h-5 text-[#2563EB]" />
                   </div>
                   <div className="flex-1 min-w-0">
                     <h5 className="font-bold text-sm text-gray-900 truncate">{doc.name}</h5>
@@ -634,7 +634,7 @@ export const CitizenDashboard = () => {
             </div>
 
             <div className="p-4 bg-blue-50 border border-blue-100 rounded-xl text-xs text-gray-600 flex items-start gap-3">
-              <ShieldCheck className="w-4 h-4 text-[#1D4ED8] mt-0.5 flex-shrink-0" />
+              <ShieldCheck className="w-4 h-4 text-[#2563EB] mt-0.5 flex-shrink-0" />
               <p>Documents stored in encrypted DigiLocker-linked vault. Aadhaar data masked at rest. All transfers use 256-bit SSL encryption.</p>
             </div>
           </div>
@@ -649,7 +649,7 @@ export const CitizenDashboard = () => {
             <div className="flex items-center justify-between mb-5 pb-4 border-b border-gray-100">
               <div className="flex items-center gap-3">
                 <div className="w-9 h-9 rounded-xl bg-blue-50 flex items-center justify-center">
-                  <ShieldCheck className="w-5 h-5 text-[#1D4ED8]" />
+                  <ShieldCheck className="w-5 h-5 text-[#2563EB]" />
                 </div>
                 <div>
                   <h4 className="font-black text-gray-900 text-sm" style={{ fontFamily: 'Outfit, sans-serif' }}>SUVIDHA Official Receipt</h4>

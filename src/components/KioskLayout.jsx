@@ -138,7 +138,7 @@ export const KioskLayout = ({ children }) => {
 
   const getRoleColor = (user) => {
     if (!user) return '';
-    if (user.role === 'admin') return 'text-[#1D4ED8] bg-blue-50 border-blue-200';
+    if (user.role === 'admin') return 'text-[#2563EB] bg-blue-50 border-blue-200';
     if (user.role === 'officer') return 'text-blue-700 bg-blue-50 border-blue-200';
     return 'text-green-700 bg-green-50 border-green-200';
   };
@@ -169,7 +169,7 @@ export const KioskLayout = ({ children }) => {
   const NotifIcon = { info: AlertCircle, success: CheckCircle2, warn: AlertCircle, error: AlertCircle };
 
   return (
-    <div className="min-h-screen flex flex-col bg-[#F3F4F6] text-gray-900">
+    <div className="min-h-screen flex flex-col bg-[#F8FAFC] text-[#0F172A]">
 
       {/* ══ 1. National Government Banner ══ */}
       <div className="bg-[#1E3A8A] text-white text-[11px] py-1.5 px-4">
@@ -191,42 +191,116 @@ export const KioskLayout = ({ children }) => {
 
       {/* ══ 2. Main Portal Header ══ */}
       <header className="bg-white border-b border-gray-200 shadow-sm px-4 py-3 sticky top-0 z-40">
-        <div className="max-w-7xl mx-auto flex items-center justify-between gap-4">
+        <div className="max-w-7xl mx-auto flex items-center justify-between gap-2">
 
           {/* Logo */}
-          <RouterLink to="/" className="flex items-center gap-3 select-none group flex-shrink-0">
-            <div className="w-10 h-10 flex items-center justify-center rounded-xl bg-[#1D4ED8] text-white flex-shrink-0 shadow-sm">
-              <Shield className="w-5 h-5" />
+          <RouterLink to="/" className="flex items-center gap-2 select-none group flex-shrink-0 min-w-0">
+            <div className="w-10 h-10 flex items-center justify-center rounded-xl bg-[#1E3A8A] text-white flex-shrink-0 shadow-sm">
+              {/* SUVIDHA Civic Governance Logo — flat vector SVG */}
+              <svg width="36" height="36" viewBox="0 0 36 36" fill="none" xmlns="http://www.w3.org/2000/svg">
+
+                {/* ── Gold arc dots — inclusivity / hope ── */}
+                <circle cx="8"    cy="5.5"  r="1.1" fill="#D97706"/>
+                <circle cx="12"   cy="3.2"  r="1.1" fill="#D97706"/>
+                <circle cx="16.5" cy="2.4"  r="1.1" fill="#D97706"/>
+                <circle cx="21"   cy="3.2"  r="1.1" fill="#D97706"/>
+                <circle cx="25"   cy="5.5"  r="1.1" fill="#D97706"/>
+
+                {/* ── Human figure — head (larger) ── */}
+                <circle cx="16.5" cy="9.5" r="2.6" fill="#FFFFFF"/>
+
+                {/* ── Body ── */}
+                <line x1="16.5" y1="12.1" x2="16.5" y2="17" stroke="#FFFFFF" strokeWidth="1.8" strokeLinecap="round"/>
+
+                {/* ── Wide V-arms (matches reference Y-spread) ── */}
+                <line x1="16.5" y1="13.5" x2="9"    y2="18.5" stroke="#FFFFFF" strokeWidth="1.6" strokeLinecap="round"/>
+                <line x1="16.5" y1="13.5" x2="24"   y2="18.5" stroke="#FFFFFF" strokeWidth="1.6" strokeLinecap="round"/>
+
+                {/* ════ LEFT BUILDING — stepped skyline ════ */}
+                {/* main body */}
+                <rect x="1"   y="19"   width="8"  height="15" fill="#FFFFFF" fillOpacity="0.92"/>
+                {/* step 1 — upper floor setback */}
+                <rect x="2.5" y="15.5" width="5"  height="3.5" fill="#FFFFFF" fillOpacity="0.8"/>
+                {/* step 2 — top spire */}
+                <rect x="4"   y="12.5" width="2"  height="3"   fill="#FFFFFF" fillOpacity="0.7"/>
+                {/* windows row 1 */}
+                <rect x="2"   y="20.2" width="1.6" height="1.6" fill="#1E3A8A"/>
+                <rect x="4.2" y="20.2" width="1.6" height="1.6" fill="#1E3A8A"/>
+                <rect x="6.4" y="20.2" width="1.6" height="1.6" fill="#1E3A8A"/>
+                {/* windows row 2 */}
+                <rect x="2"   y="22.6" width="1.6" height="1.6" fill="#1E3A8A"/>
+                <rect x="4.2" y="22.6" width="1.6" height="1.6" fill="#1E3A8A"/>
+                <rect x="6.4" y="22.6" width="1.6" height="1.6" fill="#1E3A8A"/>
+                {/* windows row 3 */}
+                <rect x="2"   y="25"   width="1.6" height="1.6" fill="#1E3A8A"/>
+                <rect x="4.2" y="25"   width="1.6" height="1.6" fill="#1E3A8A"/>
+                <rect x="6.4" y="25"   width="1.6" height="1.6" fill="#1E3A8A"/>
+
+                {/* ════ RIGHT BUILDING — taller, stepped ════ */}
+                {/* main body */}
+                <rect x="27"  y="17.5" width="8"  height="16.5" fill="#FFFFFF" fillOpacity="0.92"/>
+                {/* step 1 */}
+                <rect x="28.5" y="14"  width="5"  height="3.5"  fill="#FFFFFF" fillOpacity="0.8"/>
+                {/* step 2 — top spire */}
+                <rect x="30"  y="11"   width="2"  height="3"    fill="#FFFFFF" fillOpacity="0.7"/>
+                {/* windows row 1 */}
+                <rect x="27.8" y="18.8" width="1.6" height="1.6" fill="#1E3A8A"/>
+                <rect x="30"   y="18.8" width="1.6" height="1.6" fill="#1E3A8A"/>
+                <rect x="32.2" y="18.8" width="1.6" height="1.6" fill="#1E3A8A"/>
+                {/* windows row 2 */}
+                <rect x="27.8" y="21.2" width="1.6" height="1.6" fill="#1E3A8A"/>
+                <rect x="30"   y="21.2" width="1.6" height="1.6" fill="#1E3A8A"/>
+                <rect x="32.2" y="21.2" width="1.6" height="1.6" fill="#1E3A8A"/>
+                {/* windows row 3 */}
+                <rect x="27.8" y="23.6" width="1.6" height="1.6" fill="#1E3A8A"/>
+                <rect x="30"   y="23.6" width="1.6" height="1.6" fill="#1E3A8A"/>
+                <rect x="32.2" y="23.6" width="1.6" height="1.6" fill="#1E3A8A"/>
+                {/* windows row 4 */}
+                <rect x="27.8" y="26"   width="1.6" height="1.6" fill="#1E3A8A"/>
+                <rect x="30"   y="26"   width="1.6" height="1.6" fill="#1E3A8A"/>
+                <rect x="32.2" y="26"   width="1.6" height="1.6" fill="#1E3A8A"/>
+
+                {/* ════ GREEN LEAVES — bottom / sustainability ════ */}
+                {/* left leaf */}
+                <path d="M16.5 33 C16.5 27 11 24.5 8.5 26.5 C11.5 26.5 14.5 29.5 16.5 33Z" fill="#16A34A"/>
+                {/* right leaf */}
+                <path d="M16.5 33 C16.5 27 22 24.5 24.5 26.5 C21.5 26.5 18.5 29.5 16.5 33Z" fill="#16A34A"/>
+                {/* stem */}
+                <line x1="16.5" y1="33" x2="16.5" y2="35.5" stroke="#16A34A" strokeWidth="1.3" strokeLinecap="round"/>
+
+                {/* ── Ground baseline ── */}
+                <line x1="1" y1="34" x2="35" y2="34" stroke="#FFFFFF" strokeWidth="0.5" strokeOpacity="0.3"/>
+              </svg>
             </div>
-            <div>
-              <div className="flex items-center gap-2">
-                <span className="font-black text-xl tracking-tight text-[#1D4ED8]" style={{ fontFamily: 'Outfit, sans-serif' }}>SUVIDHA</span>
-                <span className="text-[9px] font-black px-1.5 py-0.5 rounded bg-blue-50 text-[#1D4ED8] border border-blue-200 font-mono">CIVIC</span>
+            <div className="min-w-0">
+              <div className="flex items-center gap-1.5">
+                <span className="font-black text-xl tracking-tight text-[#1E3A8A]" style={{ fontFamily: 'Outfit, sans-serif' }}>SUVIDHA</span>
+                <span className="text-[9px] font-black px-1.5 py-0.5 rounded bg-blue-50 text-[#2563EB] border border-blue-200 font-mono flex-shrink-0">CIVIC</span>
               </div>
-              <p className="text-[9px] text-gray-500 font-semibold uppercase tracking-wide">
+              <p className="text-[9px] text-slate-500 font-semibold uppercase tracking-wide truncate">
                 Unified Civic Services Portal · एकीकृत नागरिक सेवा
               </p>
             </div>
           </RouterLink>
 
           {/* Status chips — desktop only */}
-          <div className="hidden lg:flex items-center gap-2 text-[11px] font-semibold text-gray-600 flex-1 justify-center">
-            <span className="flex items-center gap-1.5 bg-gray-50 px-2.5 py-1.5 rounded-lg border border-gray-200">
-              <span className="w-2 h-2 rounded-full bg-green-500 animate-pulse-dot" />
+          <div className="hidden lg:flex items-center gap-2 text-[11px] font-semibold text-slate-600 flex-1 justify-center">
+            <span className="flex items-center gap-1.5 bg-slate-50 px-2.5 py-1.5 rounded-lg border border-slate-200 whitespace-nowrap">
+              <span className="w-2 h-2 rounded-full bg-green-500 animate-pulse-dot flex-shrink-0" />
               Server Online
             </span>
-            <span className="flex items-center gap-1.5 bg-gray-50 px-2.5 py-1.5 rounded-lg border border-gray-200">
-              <Wifi className="w-3 h-3 text-[#1D4ED8]" />
+            <span className="flex items-center gap-1.5 bg-slate-50 px-2.5 py-1.5 rounded-lg border border-slate-200 whitespace-nowrap">
+              <Wifi className="w-3 h-3 text-[#2563EB]" />
               National Gateway
             </span>
-            <span className="flex items-center gap-1.5 bg-gray-50 px-2.5 py-1.5 rounded-lg border border-gray-200 font-mono">
-              <Clock className="w-3 h-3 text-[#1D4ED8]" />
+            <span className="flex items-center gap-1.5 bg-slate-50 px-2.5 py-1.5 rounded-lg border border-slate-200 font-mono whitespace-nowrap">
+              <Clock className="w-3 h-3 text-[#2563EB]" />
               {time}
             </span>
           </div>
 
           {/* Right tools */}
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-1.5 flex-shrink-0">
             <LanguageSelector />
             <AccessibilityPanel />
 
@@ -235,7 +309,7 @@ export const KioskLayout = ({ children }) => {
               <div className="relative" ref={notifRef}>
                 <button
                   onClick={() => setNotifOpen(prev => !prev)}
-                  className="relative p-2 rounded-lg border border-gray-200 bg-white text-gray-600 hover:bg-blue-50 hover:border-blue-200 hover:text-[#1D4ED8] transition"
+                  className="relative p-2 rounded-lg border border-slate-200 bg-white text-slate-600 hover:bg-blue-50 hover:border-blue-200 hover:text-[#2563EB] transition"
                 >
                   <Bell className="w-4 h-4" />
                   {unreadCount > 0 && (
@@ -299,8 +373,8 @@ export const KioskLayout = ({ children }) => {
                 to={link.to}
                 className={`flex items-center gap-1.5 px-4 py-3 text-sm font-semibold border-b-2 transition-all ${
                   isActive(link.to)
-                    ? 'border-[#1D4ED8] text-[#1D4ED8] font-bold'
-                    : 'border-transparent text-gray-600 hover:text-[#1D4ED8] hover:bg-blue-50/50'
+                    ? 'border-[#2563EB] text-[#2563EB] font-bold'
+                    : 'border-transparent text-slate-600 hover:text-[#2563EB] hover:bg-blue-50/50'
                 }`}
               >
                 {link.icon}
@@ -336,7 +410,7 @@ export const KioskLayout = ({ children }) => {
             ) : (
               <RouterLink
                 to="/auth"
-                className="flex items-center gap-1.5 px-4 py-1.5 bg-[#1D4ED8] hover:bg-[#1E3A8A] text-white rounded-lg text-xs font-black transition shadow-sm"
+                className="flex items-center gap-1.5 px-4 py-1.5 bg-[#2563EB] hover:bg-[#1E3A8A] text-white rounded-lg text-xs font-black transition shadow-sm"
               >
                 <UserIcon className="w-3.5 h-3.5" />
                 <span>Portal Sign-In</span>
@@ -354,7 +428,7 @@ export const KioskLayout = ({ children }) => {
                 to={link.to}
                 onClick={() => setMobileMenuOpen(false)}
                 className={`flex items-center gap-2 px-3 py-2.5 rounded-lg text-sm font-semibold transition ${
-                  isActive(link.to) ? 'bg-blue-50 text-[#1D4ED8]' : 'text-gray-700 hover:bg-gray-50'
+                  isActive(link.to) ? 'bg-blue-50 text-[#2563EB]' : 'text-slate-700 hover:bg-slate-50'
                 }`}
               >
                 {link.icon}
@@ -376,7 +450,7 @@ export const KioskLayout = ({ children }) => {
       </nav>
 
       {/* ══ 4. Main Content ══ */}
-      <main className="flex-1 w-full bg-[#F3F4F6]">
+      <main className="flex-1 w-full bg-[#F8FAFC]">
         <div className="max-w-7xl mx-auto px-4 py-6 flex flex-col">
 
           {/* Back button */}
@@ -394,7 +468,7 @@ export const KioskLayout = ({ children }) => {
 
           {/* Voice nav banner */}
           {voiceNav && (
-            <div className="mb-4 p-3 rounded-lg flex items-center gap-2 border bg-blue-50 border-blue-200 text-[#1D4ED8]">
+            <div className="mb-4 p-3 rounded-lg flex items-center gap-2 border bg-blue-50 border-blue-200 text-[#2563EB]">
               <span className="w-2.5 h-2.5 rounded-full bg-blue-500 animate-pulse" />
               <span className="text-xs font-bold">Voice Accessibility Guide Activated</span>
             </div>
@@ -450,7 +524,7 @@ export const KioskLayout = ({ children }) => {
           {/* Brand */}
           <div className="space-y-3 md:col-span-2">
             <div className="flex items-center gap-2">
-              <div className="w-8 h-8 rounded-lg bg-[#1D4ED8] flex items-center justify-center">
+              <div className="w-8 h-8 rounded-lg bg-[#1E3A8A] flex items-center justify-center">
                 <Shield className="w-4 h-4 text-white" />
               </div>
               <span className="font-black text-gray-900 uppercase tracking-wider text-sm" style={{ fontFamily: 'Outfit, sans-serif' }}>SUVIDHA National Registry</span>
@@ -472,11 +546,11 @@ export const KioskLayout = ({ children }) => {
           <div className="space-y-3">
             <span className="font-bold text-gray-900 uppercase tracking-wider text-[11px] block">Quick Access</span>
             <ul className="space-y-2.5 text-gray-500">
-              <li><RouterLink to="/citizen" className="hover:text-[#1D4ED8] hover:underline flex items-center gap-1.5"><ChevronRight className="w-3 h-3" />Citizen Services</RouterLink></li>
-              <li><RouterLink to="/track" className="hover:text-[#1D4ED8] hover:underline flex items-center gap-1.5"><ChevronRight className="w-3 h-3" />Track Application</RouterLink></li>
-              <li><a href="https://india.gov.in" target="_blank" rel="noopener noreferrer" className="hover:text-[#1D4ED8] hover:underline flex items-center gap-1.5"><ChevronRight className="w-3 h-3" />National Portal of India</a></li>
-              <li><a href="https://darpg.gov.in" target="_blank" rel="noopener noreferrer" className="hover:text-[#1D4ED8] hover:underline flex items-center gap-1.5"><ChevronRight className="w-3 h-3" />DARPG — Admin Reforms</a></li>
-              <li><a href="https://digilocker.gov.in" target="_blank" rel="noopener noreferrer" className="hover:text-[#1D4ED8] hover:underline flex items-center gap-1.5"><ChevronRight className="w-3 h-3" />DigiLocker</a></li>
+              <li><RouterLink to="/citizen" className="hover:text-[#2563EB] hover:underline flex items-center gap-1.5"><ChevronRight className="w-3 h-3" />Citizen Services</RouterLink></li>
+              <li><RouterLink to="/track" className="hover:text-[#2563EB] hover:underline flex items-center gap-1.5"><ChevronRight className="w-3 h-3" />Track Application</RouterLink></li>
+              <li><a href="https://india.gov.in" target="_blank" rel="noopener noreferrer" className="hover:text-[#2563EB] hover:underline flex items-center gap-1.5"><ChevronRight className="w-3 h-3" />National Portal of India</a></li>
+              <li><a href="https://darpg.gov.in" target="_blank" rel="noopener noreferrer" className="hover:text-[#2563EB] hover:underline flex items-center gap-1.5"><ChevronRight className="w-3 h-3" />DARPG — Admin Reforms</a></li>
+              <li><a href="https://digilocker.gov.in" target="_blank" rel="noopener noreferrer" className="hover:text-[#2563EB] hover:underline flex items-center gap-1.5"><ChevronRight className="w-3 h-3" />DigiLocker</a></li>
             </ul>
           </div>
 
@@ -485,11 +559,11 @@ export const KioskLayout = ({ children }) => {
             <span className="font-bold text-gray-900 uppercase tracking-wider text-[11px] block">Helpdesk Support</span>
             <ul className="space-y-2.5 text-gray-500">
               <li className="flex items-center gap-1.5">
-                <PhoneCall className="w-3.5 h-3.5 text-[#1D4ED8] flex-shrink-0" />
-                <span>Toll Free: <strong className="text-gray-700">1912</strong> / 1800-11-0011</span>
+                <PhoneCall className="w-3.5 h-3.5 text-[#2563EB] flex-shrink-0" />
+                <span>Toll Free: <strong className="text-slate-700">1912</strong> / 1800-11-0011</span>
               </li>
               <li className="flex items-center gap-1.5">
-                <Building2 className="w-3.5 h-3.5 text-[#1D4ED8] flex-shrink-0" />
+                <Building2 className="w-3.5 h-3.5 text-[#2563EB] flex-shrink-0" />
                 <span>24×7 in 12 languages</span>
               </li>
               <li className="text-gray-500">grievance-suvidha@nic.in</li>

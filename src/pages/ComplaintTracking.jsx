@@ -115,11 +115,11 @@ export const ComplaintTracking = () => {
         highContrast ? 'border-yellow-400 bg-black text-yellow-400' : 'bg-white border-gray-200 shadow-sm'
       }`}>
         <h2 className="text-lg font-black text-gray-900 flex items-center gap-2 mb-3" style={{ fontFamily: 'Outfit, sans-serif' }}>
-          <Search className="w-5 h-5 text-[#1D4ED8]" />
+          <Search className="w-5 h-5 text-[#2563EB]" />
           Track Your Application / Grievance
         </h2>
         <p className="text-xs text-gray-500 mb-4">
-          Enter your 12-character Ticket ID (e.g. <span className="font-mono font-bold text-[#1D4ED8]">REQ-2026-982739</span>) to review real-time progress dispatches.
+          Enter your 12-character Ticket ID (e.g. <span className="font-mono font-bold text-[#2563EB]">REQ-2026-982739</span>) to review real-time progress dispatches.
         </p>
 
         <form onSubmit={handleSearchSubmit} className="flex gap-2">
@@ -221,7 +221,7 @@ export const ComplaintTracking = () => {
                 <div className="relative flex gap-3">
                   <span className="absolute -left-[26px] top-0.5 w-3 h-3 rounded-full bg-green-500 border-2 border-white"></span>
                   <div className="p-3 bg-blue-50 border border-blue-100 rounded-xl w-full">
-                    <h5 className="font-bold text-[#1D4ED8]">Official Status Remarks</h5>
+                    <h5 className="font-bold text-[#2563EB]">Official Status Remarks</h5>
                     <p className="text-[10px] text-gray-700 font-bold mt-0.5">"{ticketDetails.remarks}"</p>
                   </div>
                 </div>

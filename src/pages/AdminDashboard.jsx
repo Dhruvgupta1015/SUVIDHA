@@ -204,7 +204,7 @@ export const AdminDashboard = () => {
         <div className="bg-white border border-gray-200 rounded-2xl p-5 flex flex-col sm:flex-row sm:items-center justify-between gap-4 shadow-sm">
           <div className="flex items-center gap-4">
             <div className="w-12 h-12 rounded-xl bg-blue-50 border border-blue-100 flex items-center justify-center flex-shrink-0">
-              <ShieldAlert className="w-6 h-6 text-[#1D4ED8]" />
+              <ShieldAlert className="w-6 h-6 text-[#2563EB]" />
             </div>
             <div>
               <h2 className="text-base font-black text-gray-900" style={{ fontFamily: 'Outfit, sans-serif' }}>
@@ -270,7 +270,7 @@ export const AdminDashboard = () => {
                 {[
                   { label: 'Total Tickets', value: metrics.total, color: 'text-gray-900 bg-gray-50 border-gray-200', icon: <BarChart2 className="w-4 h-4 text-gray-500" /> },
                   { label: 'Pending Queue', value: metrics.pending, color: 'text-amber-700 bg-amber-50 border-amber-200', icon: <Clock className="w-4 h-4 text-amber-500" /> },
-                  { label: 'Active Work', value: metrics.inProgress, color: 'text-blue-700 bg-blue-50 border-blue-200', icon: <Activity className="w-4 h-4 text-[#1D4ED8]" /> },
+                  { label: 'Active Work', value: metrics.inProgress, color: 'text-blue-700 bg-blue-50 border-blue-200', icon: <Activity className="w-4 h-4 text-[#2563EB]" /> },
                   { label: 'Resolved Cases', value: metrics.completed, color: 'text-green-700 bg-green-50 border-green-200', icon: <CheckCircle2 className="w-4 h-4 text-green-500" /> },
                   { label: 'SLA Overdue', value: slaViolations.length, color: slaViolations.length > 0 ? 'text-red-700 bg-red-50 border-red-200 animate-pulse' : 'text-gray-400 bg-gray-50 border-gray-200', icon: <AlertTriangle className="w-4 h-4 text-red-500" /> }
                 ].map(stat => (
@@ -290,7 +290,7 @@ export const AdminDashboard = () => {
                   
                   <div className="space-y-4 text-xs">
                     {[
-                      { type: 'electricity', label: 'Electricity Connection', color: 'bg-[#1D4ED8]' },
+                      { type: 'electricity', label: 'Electricity Connection', color: 'bg-[#2563EB]' },
                       { type: 'water', label: 'Water Supply Systems', color: 'bg-cyan-600' },
                       { type: 'gas', label: 'PNG Gas Infrastructure', color: 'bg-orange-500' },
                       { type: 'waste', label: 'Solid Waste Operations', color: 'bg-green-600' },
@@ -333,7 +333,7 @@ export const AdminDashboard = () => {
                       {slaViolations.map(ticket => (
                         <div key={ticket.requestId} className="p-3 bg-red-50/40 border border-red-100 rounded-xl flex justify-between items-center text-xs">
                           <div>
-                            <span className="font-mono font-bold text-[#1D4ED8]">{ticket.requestId}</span>
+                            <span className="font-mono font-bold text-[#2563EB]">{ticket.requestId}</span>
                             <span className="text-[10px] text-gray-500 capitalize block mt-0.5">
                               {ticket.serviceType} · {ticket.citizenId?.name || 'Aadhaar User'}
                             </span>
@@ -534,12 +534,12 @@ export const AdminDashboard = () => {
                   <div className="space-y-1.5">
                     <div className="flex justify-between items-center text-xs font-semibold">
                       <span className="flex items-center gap-1.5 text-gray-600">
-                        <Cpu className="w-4 h-4 text-[#1D4ED8]" /> Qualcomm Edge AI CPU
+                        <Cpu className="w-4 h-4 text-[#2563EB]" /> Qualcomm Edge AI CPU
                       </span>
                       <span className="font-bold text-gray-900">{cpuLoad}%</span>
                     </div>
                     <div className="w-full bg-gray-100 h-2 rounded-full overflow-hidden">
-                      <div className="bg-[#1D4ED8] h-full transition-all duration-300" style={{ width: `${cpuLoad}%` }} />
+                      <div className="bg-[#2563EB] h-full transition-all duration-300" style={{ width: `${cpuLoad}%` }} />
                     </div>
                   </div>
 
