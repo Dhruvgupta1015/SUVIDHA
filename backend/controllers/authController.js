@@ -28,8 +28,6 @@ export const requestOtp = async (req, res) => {
     const generatedOtp = Math.floor(100000 + Math.random() * 900000).toString();
     activeOtps.set(mobile, generatedOtp);
 
-    console.log(`[SMS Gateway Simulator] Sending OTP: ${generatedOtp} to +91 ${mobile}`);
-
     return res.status(200).json({
       success: true,
       message: 'OTP generated and sent successfully (SMS Simulated)',
@@ -114,14 +112,10 @@ export const verifyOtp = async (req, res) => {
  */
 export const staffLogin = async (req, res) => {
   try {
-    console.log('[SUVIDHA] Incoming staff login body:', req.body);
-
     const { email, password } = req.body;
 
     const emailClean = email?.trim().toLowerCase();
     const passwordClean = password?.trim();
-
-    console.log('[SUVIDHA] Resolved credentials — email:', emailClean, '| password length:', passwordClean?.length);
 
     if (!emailClean || !passwordClean) {
       return res.status(400).json({

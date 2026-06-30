@@ -69,7 +69,7 @@ export const Auth = () => {
       setLoading(false); setSuccess(true);
       setTimeout(() => navigate('/citizen'), 1400);
     } catch (err) {
-      setLoading(false); setErrorMsg(err.response?.data?.message || 'OTP verification failed. Please retry.');
+      setLoading(false); setErrorMsg(err.friendlyMessage || 'OTP verification failed. Please retry.');
     }
   };
 
@@ -79,14 +79,13 @@ export const Auth = () => {
     setLoading(true); setErrorMsg('');
     try {
       const payload = { email: email.trim(), password: password.trim() };
-      console.log('Staff login payload:', payload);
       const response = await authAPI.staffLogin(payload);
       const { token, user } = response.data;
       localStorage.setItem('token', token); localStorage.setItem('user', JSON.stringify(user));
       setLoading(false); setSuccess(true);
       setTimeout(() => navigate(user.role === 'admin' ? '/admin' : '/officer'), 1400);
     } catch (err) {
-      setLoading(false); setErrorMsg(err.response?.data?.message || 'Invalid credentials. Please check email and password.');
+      setLoading(false); setErrorMsg(err.friendlyMessage || 'Invalid credentials. Please check email and password.');
     }
   };
 
