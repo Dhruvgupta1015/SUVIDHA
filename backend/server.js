@@ -18,6 +18,7 @@ import logger from './utils/logger.js';
 // Configurations
 import connectDB from './config/db.js';
 import { initRedis, createRedisClient, getRedis } from './config/redis.js';
+import { initCloudinary } from './config/cloudinary.js';
 import { initSMS } from './services/smsService.js';
 import { createAdapter } from '@socket.io/redis-adapter';
 
@@ -37,8 +38,9 @@ dotenv.config();
 // Establish Mongoose Database Connection
 connectDB();
 
-// Initialize OTP Infrastructure
+// Initialize Infrastructure
 initRedis();
+initCloudinary();
 initSMS();
 
 const app = express();
@@ -99,7 +101,7 @@ const io = new Server(server, {
 
 // Phase 2 Scaling: Attach Redis Adapter for horizontal scale across Node instances
 const pubClient = createRedisClient();
-const subClient = pubClient.duplicate();
+const subClient = createRedisClient();
 io.adapter(createAdapter(pubClient, subClient));
 
 // Set Socket.io instance inside Express app to access in controllers

@@ -76,7 +76,7 @@ export const initRedis = () => {
       client.on('connect', () => console.log('[Redis] Connected to Production Cache via ioredis'));
       client.on('error', (err) => {
         console.error('[Redis] Client Error', err.message);
-        Sentry.captureException(err);
+        if (process.env.SENTRY_DSN) Sentry.captureException(err);
       });
       redisClient = client;
       return;

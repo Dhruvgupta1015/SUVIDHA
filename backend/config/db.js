@@ -15,7 +15,7 @@ export const connectDB = async () => {
     console.log(`[DB] MongoDB Connected: ${conn.connection.host}`);
   } catch (error) {
     console.error(`[DB] MongoDB connection error: ${error.message}`);
-    Sentry.captureException(error);
+    if (process.env.SENTRY_DSN) Sentry.captureException(error);
     process.exit(1); // crash fast — Render will restart the service
   }
 };
