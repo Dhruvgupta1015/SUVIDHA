@@ -30,10 +30,10 @@ export const requestOtp = async (req, res) => {
 
     console.log(`[SMS Gateway Simulator] Sending OTP: ${generatedOtp} to +91 ${mobile}`);
 
-    return res.status(200).json({ 
-      success: true, 
+    return res.status(200).json({
+      success: true,
       message: 'OTP generated and sent successfully (SMS Simulated)',
-      demoOtp: generatedOtp 
+      demoOtp: generatedOtp
     });
   } catch (error) {
     return res.status(500).json({ success: false, message: error.message });
@@ -115,25 +115,42 @@ export const staffLogin = async (req, res) => {
   try {
     const { email, password } = req.body;
 
-    if (!email || !password) {
-      return res.status(400).json({ success: false, message: 'Please provide email and password' });
+    const emailClean = email?.trim().toLowerCase();
+    const passwordClean = password?.trim();
+
+    if (!emailClean || !passwordClean) {
+      return res.status(400).json({
+        success: false,
+        message: 'Please provide email and password'
+      });
     }
 
     // Find staff user
-    const user = await User.findOne({ email }).select('+password');
+    const user = await User.findOne({
+      email: emailClean
+    }).select('+password');
 
     if (!user || (user.role !== 'officer' && user.role !== 'admin')) {
-      return res.status(401).json({ success: false, message: 'Invalid credentials or user is not authorized staff' });
+      return res.status(401).json({
+        success: false,
+        message: 'Invalid credentials or user is not authorized staff'
+      });
     }
 
-    // Simple plain text password check for ease of hackathon demo.
-    // In production, we'd use bcrypt compare, but standard string comparison works.
-    if (password !== user.password) {
-      return res.status(401).json({ success: false, message: 'Invalid email or password' });
+    // Password check
+    if (passwordClean !== user.password) {
+      return res.status(401).json({
+        success: false,
+        message: 'Invalid email or password'
+      });
     }
 
-    // Sign Token
-    const token = generateToken({ id: user._id, role: user.role, department: user.department });
+    // Generate JWT
+    const token = generateToken({
+      id: user._id,
+      role: user.role,
+      department: user.department
+    });
 
     return res.status(200).json({
       success: true,
@@ -147,7 +164,11 @@ export const staffLogin = async (req, res) => {
         department: user.department
       }
     });
+
   } catch (error) {
-    return res.status(500).json({ success: false, message: error.message });
+    return res.status(500).json({
+      success: false,
+      message: error.message
+    });
   }
 };
