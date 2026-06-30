@@ -81,6 +81,11 @@ export const requestAPI = {
     return await API.post('/requests/emergency', payload);
   },
 
+  // T3: Admin-triggered SLA auto-escalation check
+  checkEscalations: async () => {
+    return await API.post('/requests/check-escalations');
+  },
+
   getById: async (id) => {
     return await API.get(`/requests/${id}`);
   },

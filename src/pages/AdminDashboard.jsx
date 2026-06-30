@@ -5,7 +5,7 @@ import {
   CheckCircle2, Clock, AlertTriangle, Building2, UserCheck,
   ToggleLeft, ToggleRight, Database, Cpu, Search, RefreshCw, BarChart2, Zap, X
 } from 'lucide-react';
-import { adminAPI } from '../utils/api';
+import { adminAPI, requestAPI } from '../utils/api';
 import { useAccessibility } from '../context/AccessibilityContext';
 import { computeSlaStatus } from '../utils/slaEngine';
 import { io } from 'socket.io-client';
@@ -37,6 +37,10 @@ export const AdminDashboard = () => {
   // Urgent alert toast (T8)
   const [urgentToast, setUrgentToast] = useState(null);
   const [urgentAlerts, setUrgentAlerts] = useState([]);
+
+  // T3: Escalation trigger state
+  const [escalationRunning, setEscalationRunning] = useState(false);
+  const [escalationResult, setEscalationResult] = useState(null);
 
   // Active Services state (Saved in local storage for dynamic citizen response)
   const [servicesConfig, setServicesConfig] = useState(() => {
@@ -354,6 +358,38 @@ export const AdminDashboard = () => {
                         ))}
                       </div>
                     )}
+
+                    {/* T3: SLA Escalation Trigger */}
+                    <div className="mt-3 pt-3 border-t border-red-200 flex items-center gap-3">
+                      <button
+                        onClick={async () => {
+                          setEscalationRunning(true); setEscalationResult(null);
+                          try {
+                            const res = await requestAPI.checkEscalations();
+                            setEscalationResult(res.data);
+                            if (res.data.escalated > 0) speak(`${res.data.escalated} requests escalated.`);
+                          } catch(e) {
+                            setEscalationResult({ error: true, message: e.response?.data?.message || 'Escalation check failed' });
+                          } finally { setEscalationRunning(false); }
+                        }}
+                        disabled={escalationRunning}
+                        className="flex items-center gap-2 px-4 py-2 bg-red-700 hover:bg-red-800 text-white text-xs font-black rounded-xl transition disabled:opacity-60"
+                      >
+                        {escalationRunning
+                          ? <><span className="w-3 h-3 border-2 border-white border-t-transparent rounded-full animate-spin" /> Checking…</>
+                          : <>🔴 Run SLA Escalation Check</>}
+                      </button>
+                      {escalationResult && !escalationResult.error && (
+                        <span className="text-[10px] text-red-700 font-bold">
+                          {escalationResult.escalated > 0
+                            ? `✅ ${escalationResult.escalated} escalated: ${escalationResult.ids?.join(', ')}`
+                            : '✅ All SLAs within bounds — no escalations needed'}
+                        </span>
+                      )}
+                      {escalationResult?.error && (
+                        <span className="text-[10px] text-gray-500">{escalationResult.message}</span>
+                      )}
+                    </div>
                   </div>
                 );
               })()}
@@ -429,6 +465,19 @@ export const AdminDashboard = () => {
                               <span className="text-[10px] text-gray-500 capitalize block mt-0.5">
                                 {ticket.serviceType} · {ticket.citizenId?.name || 'Aadhaar User'}
                               </span>
+                              {/* T4: Emergency audit source */}
+                              {ticket.emergencySource && (
+                                <span className="text-[9px] text-red-500 font-bold block mt-0.5">
+                                  🔍 Emergency source: {ticket.emergencySource}
+                                  {ticket.emergencyTriggeredAt && ` · ${new Date(ticket.emergencyTriggeredAt).toLocaleString('en-IN')}`}
+                                </span>
+                              )}
+                              {/* T2: Routing confidence */}
+                              {ticket.routingConfidence != null && (
+                                <span className="text-[9px] text-blue-500 font-bold block mt-0.5">
+                                  ⚡ Routing confidence: {Math.round(ticket.routingConfidence * 100)}%
+                                </span>
+                              )}
                             </div>
                             <div className="text-right">
                               <span className={`text-[9px] font-black block uppercase tracking-wider ${tierText}`}>
@@ -444,6 +493,29 @@ export const AdminDashboard = () => {
                 </div>
 
               </div>
+
+              {/* T5: Persistent Urgent Events Log */}
+              {urgentAlerts.length > 0 && (
+                <div className="gov-card p-5 space-y-3">
+                  <div className="flex items-center justify-between pb-2 border-b border-gray-100">
+                    <h4 className="section-label text-gray-700 flex items-center gap-2"><span>📡</span> Urgent Events Log</h4>
+                    <span className="text-[10px] text-gray-400 font-bold">{urgentAlerts.length} event{urgentAlerts.length !== 1 ? `"s`" : `"`"} this session</span>
+                  </div>
+                  <div className="space-y-2 max-h-[200px] overflow-y-auto pr-1">
+                    {urgentAlerts.map((alert, i) => (
+                      <div key={i} className="flex items-start gap-2.5 p-2.5 bg-gray-50 border border-gray-100 rounded-xl text-[10px]">
+                        <span className="flex-shrink-0 text-sm">{alert.isEmergency ? `"🚨`" : `"⚡`"}</span>
+                        <div className="flex-1 min-w-0">
+                          <span className="font-mono font-bold text-[#2563EB] block">{alert.requestId}</span>
+                          <span className="text-gray-600 block mt-0.5 leading-relaxed">{alert.message}</span>
+                          <span className="text-gray-400 block mt-0.5">{alert.time ? new Date(alert.time).toLocaleString(`"en-IN`") : `"Just now`"}</span>
+                        </div>
+                        <span className={`text-[9px] font-black px-1.5 py-0.5 rounded-full flex-shrink-0 ${alert.isEmergency ? `"bg-red-100 text-red-700`" : `"bg-orange-100 text-orange-700`"}`}>{alert.isEmergency ? `"EMERGENCY`" : `"CRITICAL`"}</span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
 
             </div>
           )}

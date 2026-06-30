@@ -2,6 +2,7 @@ import express from 'express';
 import {
   createRequest,
   createEmergencyRequest,
+  checkAndEscalateSla,
   getRequestById,
   getCitizenRequests,
   getDepartmentRequests,
@@ -13,13 +14,14 @@ import { protect, authorize } from '../middleware/auth.js';
 
 const router = express.Router();
 
-router.post('/create',                protect,                             createRequest);
-router.post('/emergency',             protect,                             createEmergencyRequest);
-router.get('/my-requests',            protect,                             getCitizenRequests);
-router.get('/department',             protect, authorize('officer', 'admin'), getDepartmentRequests);
-router.get('/:id',                                                         getRequestById);
-router.put('/:id/action',             protect, authorize('officer', 'admin'), updateRequestStatus);
-router.put('/:id/evidence-action',    protect, authorize('officer', 'admin'), evidenceAction);
-router.put('/:id/reupload',           protect,                             reuploadeEvidence);
+router.post('/create',                 protect,                              createRequest);
+router.post('/emergency',              protect,                              createEmergencyRequest);
+router.post('/check-escalations',      protect, authorize('admin'),          checkAndEscalateSla);   // T3: admin-triggered SLA auto-escalation
+router.get('/my-requests',             protect,                              getCitizenRequests);
+router.get('/department',              protect, authorize('officer', 'admin'), getDepartmentRequests);
+router.get('/:id',                                                            getRequestById);
+router.put('/:id/action',              protect, authorize('officer', 'admin'), updateRequestStatus);
+router.put('/:id/evidence-action',     protect, authorize('officer', 'admin'), evidenceAction);
+router.put('/:id/reupload',            protect,                              reuploadeEvidence);
 
 export default router;

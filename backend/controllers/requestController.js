@@ -56,23 +56,38 @@ export const createRequest = async (req, res) => {
       return res.status(400).json({ success: false, message });
     }
 
-    // ── Cat3 T1: AI Priority Engine (overrides manual selection) ──────────
-    const { priority, priorityReason, isEmergency } = detectPriority(description, subService);
+    // ── Cat3 T1: AI Priority Engine — cumulative scoring ──────────────────────
+    const { priority, priorityScore, priorityReason, isEmergency } = detectPriority(description, subService);
 
-    // ── Cat3 T3: Smart Department Routing Engine ──────────────────────
-    const { department: assignedDepartment, routingReason } = routeComplaint(serviceType, subService, description);
+    // ── Cat3 T3: Smart Department Routing with confidence ────────────────────
+    const { department: assignedDepartment, routingReason, routingConfidence } = routeComplaint(serviceType, subService, description);
+
+    // ── T5: Build initial urgentEvents entry if Critical/Emergency ─────────
+    const urgentEvents = [];
+    if (priority === 'Critical' || isEmergency) {
+      urgentEvents.push({
+        message:   `${isEmergency ? '🚨 Emergency' : '⚡ Critical'} complaint created: ${subService} (${serviceType}). Score: ${priorityScore}.`,
+        type:      isEmergency ? 'emergency' : 'critical',
+        timestamp: new Date()
+      });
+    }
 
     const request = await Request.create({
       citizenId,
       serviceType,
       subService,
       description,
-      priority,           // AI-detected, not manual
+      priority,
+      priorityScore,
       priorityReason,
       isEmergency,
+      emergencySource:      isEmergency ? 'AI' : null,     // T4: AI auto-detected
+      emergencyTriggeredAt: isEmergency ? new Date() : null,
       assignedDepartment,
       routingReason,
-      documents: scoredDocs
+      routingConfidence,
+      documents: scoredDocs,
+      urgentEvents
     });
 
     const populatedRequest = await Request.findById(request._id).populate('citizenId', 'name mobile');
@@ -107,11 +122,13 @@ export const createRequest = async (req, res) => {
     return res.status(201).json({
       success: true,
       message: 'Civic request registered successfully',
-      requestId:     request.requestId,
+      requestId:         request.requestId,
       priority,
+      priorityScore,
       priorityReason,
       isEmergency,
-      request:       populatedRequest
+      routingConfidence,
+      request:           populatedRequest
     });
   } catch (error) {
     return res.status(500).json({ success: false, message: error.message });
@@ -136,26 +153,38 @@ export const createEmergencyRequest = async (req, res) => {
       return res.status(400).json({ success: false, message: 'Description is required.' });
     }
 
-    // Smart routing
-    const { department: assignedDepartment, routingReason } = routeComplaint(serviceType, subService || emergencyType, description);
+    // Smart routing with confidence
+    const { department: assignedDepartment, routingReason, routingConfidence } = routeComplaint(serviceType, subService || emergencyType, description);
+
+    // T5: Initial urgent event
+    const urgentEvents = [{
+      message:   `🚨 EMERGENCY fast-lane created: ${emergencyType || subService} — Emergency Response Unit alerted.`,
+      type:      'emergency',
+      timestamp: new Date()
+    }];
 
     const request = await Request.create({
       citizenId,
       serviceType,
-      subService:         subService || emergencyType || 'Emergency Complaint',
-      description:        description.trim(),
-      priority:           'Critical',
-      priorityReason:     `Emergency fast-lane: ${emergencyType || 'Emergency reported by citizen'}`,
-      isEmergency:        true,
-      status:             'In-Progress',   // bypass Pending queue
+      subService:           subService || emergencyType || 'Emergency Complaint',
+      description:          description.trim(),
+      priority:             'Critical',
+      priorityScore:        12,   // max score for explicit emergency
+      priorityReason:       `Emergency fast-lane: ${emergencyType || 'Emergency reported by citizen'}`,
+      isEmergency:          true,
+      emergencySource:      'Citizen',     // T4: citizen pressed Emergency button
+      emergencyTriggeredBy: citizenId,     // T4: citizen user ID
+      emergencyTriggeredAt: new Date(),   // T4: timestamp
+      status:               'In-Progress',
       assignedDepartment,
       routingReason,
-      assignedTeam:       'Emergency Response Unit'
+      routingConfidence,
+      assignedTeam:         'Emergency Response Unit',
+      urgentEvents
     });
 
     const populatedRequest = await Request.findById(request._id).populate('citizenId', 'name mobile');
 
-    // Socket — urgent broadcast to all connected officers/admins
     const io = req.app.get('io');
     if (io) {
       io.emit('urgentAlert', {
@@ -179,12 +208,79 @@ export const createEmergencyRequest = async (req, res) => {
     }
 
     return res.status(201).json({
-      success:     true,
-      message:     'Emergency complaint registered. Emergency Response Unit has been alerted.',
-      requestId:   request.requestId,
-      priority:    'Critical',
-      isEmergency: true,
-      request:     populatedRequest
+      success:          true,
+      message:          'Emergency complaint registered. Emergency Response Unit has been alerted.',
+      requestId:        request.requestId,
+      priority:         'Critical',
+      isEmergency:      true,
+      routingConfidence,
+      request:          populatedRequest
+    });
+  } catch (error) {
+    return res.status(500).json({ success: false, message: error.message });
+  }
+};
+
+/**
+ * @desc    Auto-escalation check — called by a periodic job or admin trigger
+ *          Finds requests at 72h+ that haven't been escalated yet and fires urgentAlert.
+ * @route   POST /api/requests/check-escalations
+ * @access  Private (Admin only)
+ */
+export const checkAndEscalateSla = async (req, res) => {
+  try {
+    const seventyTwoHoursAgo = new Date(Date.now() - 72 * 60 * 60 * 1000);
+
+    // Find unresolved requests older than 72h that have NOT been escalated yet
+    const escalationCandidates = await Request.find({
+      createdAt:   { $lte: seventyTwoHoursAgo },
+      status:      { $nin: ['Completed', 'Rejected'] },
+      escalatedAt: null                          // dedup guard — only escalate once
+    }).populate('citizenId', 'name mobile');
+
+    if (escalationCandidates.length === 0) {
+      return res.status(200).json({ success: true, message: 'No new escalations required.', escalated: 0 });
+    }
+
+    const io = req.app.get('io');
+    const escalatedIds = [];
+
+    for (const request of escalationCandidates) {
+      const ageHours = Math.floor((Date.now() - new Date(request.createdAt).getTime()) / (1000 * 60 * 60));
+
+      // Push escalation event into urgentEvents (T5)
+      request.urgentEvents.push({
+        message:   `🔴 SLA Escalated: ${request.requestId} is ${ageHours}h old — ${request.assignedDepartment} must act immediately.`,
+        type:      'escalation',
+        timestamp: new Date()
+      });
+
+      // Set escalatedAt to prevent future duplicate escalations (T3)
+      request.slaStatus   = 'Escalated';
+      request.escalatedAt = new Date();
+
+      await request.save();
+
+      // Broadcast urgentAlert (T8)
+      if (io) {
+        io.emit('urgentAlert', {
+          requestId:   request.requestId,
+          priority:    request.priority,
+          isEmergency: request.isEmergency,
+          service:     request.serviceType,
+          message:     `🔴 SLA ESCALATED: ${request.requestId} — ${ageHours}h old, no resolution. Immediate action required.`,
+          time:        new Date().toISOString()
+        });
+      }
+
+      escalatedIds.push(request.requestId);
+    }
+
+    return res.status(200).json({
+      success:   true,
+      message:   `${escalatedIds.length} request(s) auto-escalated.`,
+      escalated: escalatedIds.length,
+      ids:       escalatedIds
     });
   } catch (error) {
     return res.status(500).json({ success: false, message: error.message });

@@ -1,71 +1,143 @@
 /**
- * priorityEngine.js — Deterministic AI Priority & Urgency Engine for SUVIDHA
+ * priorityEngine.js — Cumulative AI Priority & Urgency Engine for SUVIDHA
  *
- * Analyses complaint description + subService to auto-assign priority.
- * No external APIs — pure keyword pattern matching.
+ * Upgrade: Multi-keyword severity STACKING.
+ * Instead of first-match, every keyword adds to a cumulative score.
+ * Higher total score → higher urgency tier.
  *
- * Priority tiers:
- *   Critical → fire, gas leak, electrocution, explosion, sewage overflow, flood …
- *   High     → water leakage, streetlight, garbage overflow, power outage …
- *   Standard → everything else
+ * Score thresholds:
+ *   8+   → Critical (Emergency)   isEmergency = true
+ *   4–7  → Critical               isEmergency = false
+ *   2–3  → High
+ *   0–1  → Standard
  *
- * Returns: { priority, priorityReason, isEmergency }
+ * Returns: { priority, priorityScore, priorityReason, isEmergency }
  */
 
-// ─── Critical emergency keywords ──────────────────────────────────────────────
-const CRITICAL_KEYWORDS = [
-  'fire', 'gas leak', 'electrocution', 'transformer blast', 'explosion',
-  'short circuit', 'sewage overflow', 'flood', 'flooding', 'electric shock',
-  'exposed wire', 'live wire', 'major leak', 'burst main', 'road accident',
-  'building collapse', 'oil spill', 'chemical leak', 'toxic', 'emergency'
+// ─── Scored keyword map (keyword → weight) ────────────────────────────────────
+const CRITICAL_SCORED = [
+  { kw: 'electrocution',    score: 4 },
+  { kw: 'transformer blast',score: 4 },
+  { kw: 'explosion',        score: 4 },
+  { kw: 'electric shock',   score: 4 },
+  { kw: 'building collapse',score: 4 },
+  { kw: 'fire',             score: 3 },
+  { kw: 'gas leak',         score: 3 },
+  { kw: 'flood',            score: 3 },
+  { kw: 'flooding',         score: 3 },
+  { kw: 'sewage overflow',  score: 3 },
+  { kw: 'short circuit',    score: 3 },
+  { kw: 'live wire',        score: 3 },
+  { kw: 'exposed wire',     score: 3 },
+  { kw: 'burst main',       score: 3 },
+  { kw: 'road accident',    score: 3 },
+  { kw: 'major leak',       score: 3 },
+  { kw: 'chemical leak',    score: 3 },
+  { kw: 'oil spill',        score: 3 },
+  { kw: 'toxic',            score: 3 },
+  { kw: 'emergency',        score: 2 },
 ];
 
-// ─── High urgency keywords ─────────────────────────────────────────────────
-const HIGH_KEYWORDS = [
-  'water leakage', 'leakage', 'streetlight off', 'no streetlight',
-  'garbage overflow', 'power outage', 'no power', 'blackout',
-  'broken pipeline', 'pipeline broken', 'road blockage', 'road blocked',
-  'pothole', 'no water supply', 'water cut', 'low pressure', 'meter fault',
-  'sewage smell', 'drain blocked', 'overflow', 'overflowing', 'pipeline burst',
-  'electricity gone', 'no electricity', 'connection dead', 'voltage drop'
+const HIGH_SCORED = [
+  { kw: 'water leakage',    score: 2 },
+  { kw: 'leakage',          score: 2 },
+  { kw: 'streetlight off',  score: 2 },
+  { kw: 'no streetlight',   score: 2 },
+  { kw: 'garbage overflow', score: 2 },
+  { kw: 'power outage',     score: 2 },
+  { kw: 'no power',         score: 2 },
+  { kw: 'blackout',         score: 2 },
+  { kw: 'broken pipeline',  score: 2 },
+  { kw: 'pipeline broken',  score: 2 },
+  { kw: 'pipeline burst',   score: 2 },
+  { kw: 'road blockage',    score: 2 },
+  { kw: 'road blocked',     score: 2 },
+  { kw: 'no water supply',  score: 2 },
+  { kw: 'water cut',        score: 2 },
+  { kw: 'no electricity',   score: 2 },
+  { kw: 'electricity gone', score: 2 },
+  { kw: 'connection dead',  score: 2 },
+  { kw: 'voltage drop',     score: 1 },
+  { kw: 'pothole',          score: 1 },
+  { kw: 'low pressure',     score: 1 },
+  { kw: 'meter fault',      score: 1 },
+  { kw: 'sewage smell',     score: 1 },
+  { kw: 'drain blocked',    score: 1 },
+  { kw: 'overflow',         score: 1 },
+  { kw: 'overflowing',      score: 1 },
 ];
 
 /**
- * Auto-detect priority from description and sub-service text.
+ * Cumulative priority scoring from description + sub-service text.
  *
  * @param {string} description - Citizen complaint description
  * @param {string} subService  - Sub-service category chosen
- * @returns {{ priority: string, priorityReason: string, isEmergency: boolean }}
+ * @returns {{
+ *   priority: string,
+ *   priorityScore: number,
+ *   priorityReason: string,
+ *   isEmergency: boolean
+ * }}
  */
 export function detectPriority(description = '', subService = '') {
   const text = `${description} ${subService}`.toLowerCase();
 
-  // ── Critical pass ──────────────────────────────────────────────────────────
-  for (const kw of CRITICAL_KEYWORDS) {
+  let totalScore = 0;
+  const matchedKeywords = [];
+
+  // ── Score ALL critical keywords present ──────────────────────────────────────
+  for (const { kw, score } of CRITICAL_SCORED) {
     if (text.includes(kw)) {
-      return {
-        priority:       'Critical',
-        priorityReason: `AI detected critical keyword: "${kw}"`,
-        isEmergency:    true
-      };
+      totalScore += score;
+      matchedKeywords.push(`"${kw}" (+${score})`);
     }
   }
 
-  // ── High urgency pass ──────────────────────────────────────────────────────
-  for (const kw of HIGH_KEYWORDS) {
+  // ── Score ALL high-urgency keywords present ───────────────────────────────────
+  for (const { kw, score } of HIGH_SCORED) {
     if (text.includes(kw)) {
-      return {
-        priority:       'High',
-        priorityReason: `AI detected urgency keyword: "${kw}"`,
-        isEmergency:    false
-      };
+      totalScore += score;
+      matchedKeywords.push(`"${kw}" (+${score})`);
     }
   }
 
-  // ── Standard default ───────────────────────────────────────────────────────
+  // ── Tier classification ───────────────────────────────────────────────────────
+  const keywordSummary = matchedKeywords.slice(0, 4).join(', '); // cap to 4 for readability
+
+  if (totalScore >= 8) {
+    return {
+      priority:       'Critical',
+      priorityScore:  totalScore,
+      priorityReason: `AI cumulative score ${totalScore}/8+ → Critical Emergency. Triggers: ${keywordSummary || 'multi-hazard'}`,
+      isEmergency:    true
+    };
+  }
+
+  if (totalScore >= 4) {
+    return {
+      priority:       'Critical',
+      priorityScore:  totalScore,
+      priorityReason: `AI cumulative score ${totalScore}/4–7 → Critical. Triggers: ${keywordSummary}`,
+      isEmergency:    false
+    };
+  }
+
+  if (totalScore >= 2) {
+    return {
+      priority:       'High',
+      priorityScore:  totalScore,
+      priorityReason: `AI cumulative score ${totalScore}/2–3 → High urgency. Triggers: ${keywordSummary}`,
+      isEmergency:    false
+    };
+  }
+
+  // ── Standard (score 0–1) ──────────────────────────────────────────────────────
   return {
     priority:       'Standard',
-    priorityReason: 'No urgency keywords detected — routine complaint',
+    priorityScore:  totalScore,
+    priorityReason: totalScore === 1
+      ? `AI score ${totalScore} — low urgency signal. Triggers: ${keywordSummary}`
+      : 'No urgency keywords detected — routine complaint',
     isEmergency:    false
   };
 }

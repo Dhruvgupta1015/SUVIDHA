@@ -47,38 +47,83 @@ const requestSchema = new mongoose.Schema({
     trim: true,
     default: ''
   },
+
+  // ── AI Priority Engine fields ───────────────────────────────────────────────
   priority: {
     type: String,
     enum: ['Standard', 'High', 'Critical'],
     default: 'Standard'
   },
+  priorityScore: {
+    type: Number,
+    default: 0                           // cumulative keyword score from priorityEngine
+  },
   priorityReason: {
     type: String,
     default: 'No urgency keywords detected — routine complaint'
   },
+
+  // ── Emergency flags ─────────────────────────────────────────────────────────
   isEmergency: {
     type: Boolean,
     default: false
   },
+  emergencySource: {
+    type: String,
+    enum: ['AI', 'Citizen', 'Officer', 'Admin', null],
+    default: null                        // T4: who triggered the emergency flag
+  },
+  emergencyTriggeredBy: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'User',
+    default: null                        // T4: user reference who triggered
+  },
+  emergencyTriggeredAt: {
+    type: Date,
+    default: null                        // T4: timestamp of emergency trigger
+  },
+
+  // ── SLA Intelligence fields ─────────────────────────────────────────────────
   slaStatus: {
     type: String,
     enum: ['Safe', 'Warning', 'Critical', 'Escalated'],
     default: 'Safe'
   },
+  escalatedAt: {
+    type: Date,
+    default: null                        // T3: when auto-escalation fired (prevents re-trigger)
+  },
+
+  // ── Smart Routing fields ────────────────────────────────────────────────────
   routingReason: {
     type: String,
     default: ''
   },
+  routingConfidence: {
+    type: Number,
+    default: 0.65                        // T2: 0.0–1.0 routing confidence score
+  },
+
+  // ── Persistent Urgent Events log ────────────────────────────────────────────
+  urgentEvents: [                        // T5: persistent alert memory
+    {
+      message:   { type: String, required: true },
+      type:      { type: String, enum: ['emergency', 'critical', 'escalation', 'info'], default: 'info' },
+      timestamp: { type: Date, default: Date.now }
+    }
+  ],
+
+  // ── Evidence documents ──────────────────────────────────────────────────────
   documents: [
     {
       name:        { type: String, required: true },
       path:        { type: String, required: true },
       verified:    { type: Boolean, default: false },
       confidence:  { type: Number,  default: 1.0 },
-      flagged:     { type: Boolean, default: false },   // true if confidence < 0.50 (suspicious)
+      flagged:     { type: Boolean, default: false },   // true if confidence < 0.50
       reason:      { type: String,  default: '' },       // AI scoring rationale
-      reviewedBy:  { type: mongoose.Schema.Types.ObjectId, ref: 'User', default: null }, // officer who reviewed
-      reviewedAt:  { type: Date,    default: null }      // when officer reviewed
+      reviewedBy:  { type: mongoose.Schema.Types.ObjectId, ref: 'User', default: null },
+      reviewedAt:  { type: Date,    default: null }
     }
   ]
 }, {

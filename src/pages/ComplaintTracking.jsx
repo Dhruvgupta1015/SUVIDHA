@@ -286,6 +286,31 @@ export const ComplaintTracking = () => {
             </div>
           )}
 
+          {/* T2: Smart Routing Confidence */}
+          {ticketDetails.routingReason && (
+            <div className="flex items-start gap-2 p-3 rounded-xl bg-blue-50 border border-blue-200 text-xs text-blue-800">
+              <span className="text-base flex-shrink-0"><Zap className="w-4 h-4 text-blue-500" /></span>
+              <div>
+                <span className="font-bold block">Smart Department Routing — {Math.round((ticketDetails.routingConfidence || 0.65) * 100)}% confidence</span>
+                <span className="opacity-80">{ticketDetails.routingReason}</span>
+              </div>
+            </div>
+          )}
+
+          {/* T4: Emergency Audit Trail */}
+          {ticketDetails.isEmergency && ticketDetails.emergencySource && (
+            <div className="flex items-start gap-2 p-3 rounded-xl bg-red-50 border border-red-200 text-xs text-red-800">
+              <span className="text-base flex-shrink-0">🔍</span>
+              <div>
+                <span className="font-bold block">Emergency Audit Trail</span>
+                <span className="opacity-80 block">Triggered by: <span className="font-bold">{ticketDetails.emergencySource}</span></span>
+                {ticketDetails.emergencyTriggeredAt && (
+                  <span className="opacity-70 block">At: {new Date(ticketDetails.emergencyTriggeredAt).toLocaleString('en-IN')}</span>
+                )}
+              </div>
+            </div>
+          )}
+
           {/* Description details */}
           <div className="space-y-1.5 text-xs">
             <span className="section-label text-gray-500 block">Description Details</span>

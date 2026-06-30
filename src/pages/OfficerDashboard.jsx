@@ -536,6 +536,38 @@ export const OfficerDashboard = () => {
                       <span className="text-green-700 font-medium">{selectedRequest.assignedTeam}</span>
                     </div>
                   )}
+                  {/* T2: Routing confidence */}
+                  {selectedRequest.routingReason && (
+                    <div className="flex gap-2 items-start">
+                      <Zap className="w-3.5 h-3.5 text-blue-400 flex-shrink-0 mt-0.5" />
+                      <div>
+                        <span className="text-blue-700 font-bold block text-[10px]">
+                          Smart Routing — {Math.round((selectedRequest.routingConfidence || 0.65) * 100)}% confidence
+                        </span>
+                        <span className="text-blue-500 text-[10px]">{selectedRequest.routingReason}</span>
+                      </div>
+                    </div>
+                  )}
+                  {/* T1: Priority reason */}
+                  {selectedRequest.priorityReason && selectedRequest.priorityReason !== 'No urgency keywords detected — routine complaint' && (
+                    <div className="flex gap-2 items-start">
+                      <AlertTriangle className="w-3.5 h-3.5 text-amber-500 flex-shrink-0 mt-0.5" />
+                      <span className="text-amber-700 text-[10px] font-medium">{selectedRequest.priorityReason}</span>
+                    </div>
+                  )}
+                  {/* T4: Emergency audit trail */}
+                  {selectedRequest.isEmergency && selectedRequest.emergencySource && (
+                    <div className="p-2 bg-red-50 border border-red-200 rounded-xl flex gap-2 items-start">
+                      <span className="text-sm flex-shrink-0">🔍</span>
+                      <div>
+                        <span className="text-red-700 font-bold block text-[10px]">Emergency Audit Trail</span>
+                        <span className="text-red-600 text-[10px] block">Source: {selectedRequest.emergencySource}</span>
+                        {selectedRequest.emergencyTriggeredAt && (
+                          <span className="text-red-500 text-[10px]">At: {new Date(selectedRequest.emergencyTriggeredAt).toLocaleString('en-IN')}</span>
+                        )}
+                      </div>
+                    </div>
+                  )}
                 </div>
               </div>
 
