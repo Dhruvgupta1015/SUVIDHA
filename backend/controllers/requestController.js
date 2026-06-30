@@ -1,3 +1,4 @@
+import mongoose from 'mongoose';
 import Request from '../models/Request.js';
 import User from '../models/User.js';
 
@@ -81,11 +82,14 @@ export const getRequestById = async (req, res) => {
   try {
     const { id } = req.params;
 
-    let query = {};
+    // Safe ID resolution — avoids CastError when id is a REQ- string
+    let query = null;
     if (id.startsWith('REQ-')) {
       query = { requestId: id.toUpperCase() };
-    } else {
+    } else if (mongoose.Types.ObjectId.isValid(id)) {
       query = { _id: id };
+    } else {
+      return res.status(400).json({ success: false, message: 'Invalid request ID format' });
     }
 
     const request = await Request.findOne(query).populate('citizenId', 'name mobile aadhaar');
@@ -167,9 +171,20 @@ export const updateRequestStatus = async (req, res) => {
     const { id } = req.params;
     const { status, assignedTeam, remarks, assignedDepartment } = req.body;
 
-    const request = await Request.findOne({
-      $or: [{ requestId: id.toUpperCase() }, { _id: id }]
-    });
+    // Safe ID resolution — avoids CastError when id is a REQ- string
+    let query = null;
+    if (id.startsWith('REQ-')) {
+      query = { requestId: id.toUpperCase() };
+    } else if (mongoose.Types.ObjectId.isValid(id)) {
+      query = { _id: id };
+    } else {
+      return res.status(400).json({
+        success: false,
+        message: 'Invalid request ID format'
+      });
+    }
+
+    const request = await Request.findOne(query);
 
     if (!request) {
       return res.status(404).json({ success: false, message: 'Request not found' });
