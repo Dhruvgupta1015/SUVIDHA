@@ -30,7 +30,7 @@ const priorityBadge = (p) => {
 };
 
 const serviceIconMap = {
-  electricity: <Zap className="w-4 h-4 text-[#2563EB]" />,
+  electricity: <Zap className="w-4 h-4 text-blue-600" />,
   water:       <Droplet className="w-4 h-4 text-cyan-600" />,
   gas:         <Flame className="w-4 h-4 text-orange-500" />,
   waste:       <Trash2 className="w-4 h-4 text-green-600" />,
@@ -291,31 +291,31 @@ export const CitizenDashboard = () => {
 
       {/* ── Emergency Modal (T2) ── */}
       {showEmergency && (
-        <div className="fixed inset-0 bg-black/60 z-50 flex items-center justify-center p-4" onClick={() => !emergencySubmitting && setShowEmergency(false)}>
-          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md p-6 animate-fade-up border-2 border-red-300" onClick={e => e.stopPropagation()}>
-            <div className="flex items-center gap-3 mb-5 pb-4 border-b border-red-100">
-              <div className="w-10 h-10 rounded-xl bg-red-100 border border-red-200 flex items-center justify-center flex-shrink-0">
-                <span className="text-xl">🚨</span>
+        <div className="fixed inset-0 bg-black/60 z-[9999] flex items-center justify-center p-4 sm:p-6" onClick={() => !emergencySubmitting && setShowEmergency(false)}>
+          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-xl p-6 sm:p-8 max-h-[95vh] overflow-y-auto animate-fade-up border-2 border-red-300 flex flex-col" onClick={e => e.stopPropagation()}>
+            <div className="flex items-center gap-4 mb-6 pb-5 border-b border-red-100 shrink-0">
+              <div className="w-12 h-12 rounded-xl bg-red-100 border border-red-200 flex items-center justify-center flex-shrink-0">
+                <span className="text-2xl">🚨</span>
               </div>
-              <div>
-                <h3 className="font-black text-red-700 text-base" style={{ fontFamily: 'Outfit, sans-serif' }}>Emergency Report</h3>
-                <p className="text-xs text-red-500 mt-0.5">Bypasses normal queue — Emergency Response Unit alerted immediately</p>
+              <div className="flex-1">
+                <h3 className="font-black text-red-700 text-xl">Emergency Report</h3>
+                <p className="text-xs text-red-500 mt-1">Bypasses normal queue — Emergency Response Unit alerted immediately</p>
               </div>
-              <button onClick={() => setShowEmergency(false)} className="ml-auto text-gray-400 hover:text-gray-700"><X className="w-5 h-5" /></button>
+              <button onClick={() => setShowEmergency(false)} className="text-gray-400 hover:text-gray-800 transition p-2 bg-gray-50 hover:bg-gray-100 rounded-full"><X className="w-5 h-5" /></button>
             </div>
 
             {emergencySuccess ? (
               <div className="py-8 flex flex-col items-center justify-center text-center gap-3 animate-fade-in">
                 <span className="text-5xl">🚨</span>
-                <h4 className="font-black text-red-700 text-lg" style={{ fontFamily: 'Outfit, sans-serif' }}>Emergency Registered!</h4>
+                <h4 className="font-black text-red-700 text-lg">Emergency Registered!</h4>
                 <p className="text-sm text-gray-600">Ticket <span className="font-mono font-bold text-red-600">{emergencySuccess.requestId}</span></p>
                 <p className="text-xs text-gray-500">Emergency Response Unit has been alerted. Status: In-Progress.</p>
               </div>
             ) : (
-              <form onSubmit={handleEmergencySubmit} className="space-y-4">
+              <form onSubmit={handleEmergencySubmit} className="space-y-6 flex-1 flex flex-col">
                 <div>
-                  <label className="section-label text-gray-600 block mb-2">Emergency Type</label>
-                  <div className="grid grid-cols-1 gap-2">
+                  <label className="section-label text-gray-700 block mb-3 text-sm font-bold">Emergency Type</label>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                     {[
                       { id: 'fire',         label: '🔥 Fire Emergency',          service: 'general' },
                       { id: 'gas leak',     label: '💨 Gas Leak / Explosion Risk', service: 'gas' },
@@ -327,10 +327,10 @@ export const CitizenDashboard = () => {
                         key={em.id}
                         type="button"
                         onClick={() => { setEmergencyType(em.id); setEmergencyService(em.service); }}
-                        className={`py-2.5 px-4 rounded-xl border-2 text-left text-sm font-bold transition ${
+                        className={`p-3.5 rounded-xl border-2 text-left text-sm font-bold transition-all shadow-sm ${
                           emergencyType === em.id
-                            ? 'border-red-400 bg-red-50 text-red-700'
-                            : 'border-gray-200 bg-white hover:border-red-200 text-gray-700'
+                            ? 'border-red-400 bg-red-50 text-red-800 shadow-md ring-2 ring-red-200'
+                            : 'border-gray-200 bg-white hover:border-red-200 hover:bg-red-50/30 text-gray-700'
                         }`}
                       >
                         {em.label}
@@ -338,28 +338,30 @@ export const CitizenDashboard = () => {
                     ))}
                   </div>
                 </div>
-                <div>
-                  <label className="section-label text-gray-600 block mb-2">Describe the Emergency <span className="text-red-500">*</span></label>
+                <div className="flex-1">
+                  <label className="section-label text-gray-700 block mb-3 text-sm font-bold">Describe the Emergency <span className="text-red-500">*</span></label>
                   <textarea
-                    rows={3}
+                    rows={4}
                     placeholder="Describe exact location, nature of emergency, number of people affected…"
                     value={emergencyDesc}
                     onChange={e => setEmergencyDesc(e.target.value)}
-                    className="gov-input resize-none"
+                    className="gov-input resize-none w-full p-4 text-sm"
                     required
                   />
                 </div>
-                <button
-                  type="submit"
-                  disabled={emergencySubmitting}
-                  className="w-full py-3 rounded-xl font-black text-sm bg-red-600 hover:bg-red-700 text-white transition flex items-center justify-center gap-2 disabled:opacity-60"
-                >
-                  {emergencySubmitting ? (
-                    <><span className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" /> Alerting Response Unit…</>
-                  ) : (
-                    <>🚨 Report Emergency Now</>
-                  )}
-                </button>
+                <div className="pt-2 shrink-0">
+                  <button
+                    type="submit"
+                    disabled={emergencySubmitting}
+                    className="w-full py-4 rounded-xl font-black text-base bg-red-600 hover:bg-red-700 text-white transition-all shadow-lg hover:shadow-red-500/30 flex items-center justify-center gap-2 disabled:opacity-60"
+                  >
+                    {emergencySubmitting ? (
+                      <><span className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin" /> Alerting Response Unit…</>
+                    ) : (
+                      <>🚨 Report Emergency Now</>
+                    )}
+                  </button>
+                </div>
               </form>
             )}
           </div>
@@ -375,7 +377,7 @@ export const CitizenDashboard = () => {
             </div>
             <div>
               <p className="text-blue-200 text-xs font-semibold uppercase tracking-wider">Citizen Portal</p>
-              <h2 className="text-lg font-black text-white" style={{ fontFamily: 'Outfit, sans-serif' }}>
+              <h2 className="text-lg font-black text-white">
                 Namaste, {currentUser.name || 'Citizen'} 🙏
               </h2>
               <p className="text-blue-200 text-xs mt-0.5">
@@ -405,7 +407,7 @@ export const CitizenDashboard = () => {
             </button>
             <button
               onClick={() => setActiveTab('apply')}
-              className="flex items-center gap-2 px-5 py-2.5 bg-white text-[#2563EB] font-black text-sm rounded-xl hover:bg-blue-50 transition shadow"
+              className="flex items-center gap-2 px-5 py-2.5 bg-white text-blue-600 font-black text-sm rounded-xl hover:bg-blue-50 transition shadow"
             >
               <PlusCircle className="w-4 h-4" />
               Apply New Service
@@ -417,7 +419,7 @@ export const CitizenDashboard = () => {
       {/* ══ Stats Strip ══ */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
         {[
-          { label: 'Total Requests', value: stats.total,    icon: <FileText className="w-4 h-4" />,    color: 'text-[#2563EB] bg-blue-50 border-blue-100' },
+          { label: 'Total Requests', value: stats.total,    icon: <FileText className="w-4 h-4" />,    color: 'text-blue-600 bg-blue-50 border-blue-100' },
           { label: 'Pending',        value: stats.pending,  icon: <Clock className="w-4 h-4" />,        color: 'text-amber-600 bg-amber-50 border-amber-100' },
           { label: 'In Progress',    value: stats.active,   icon: <TrendingUp className="w-4 h-4" />,   color: 'text-blue-600 bg-blue-50 border-blue-100' },
           { label: 'Resolved',       value: stats.resolved, icon: <CheckCircle className="w-4 h-4" />,  color: 'text-green-600 bg-green-50 border-green-100' },
@@ -427,7 +429,7 @@ export const CitizenDashboard = () => {
               {s.icon}
             </div>
             <div>
-              <div className="text-xl font-black text-gray-900" style={{ fontFamily: 'Outfit, sans-serif' }}>{s.value}</div>
+              <div className="text-xl font-black text-gray-900">{s.value}</div>
               <div className="text-[10px] text-gray-500 font-medium uppercase tracking-wide">{s.label}</div>
             </div>
           </div>
@@ -459,7 +461,7 @@ export const CitizenDashboard = () => {
                 <span className="text-sm whitespace-nowrap">{tab.label}</span>
               </div>
               {tab.badge !== undefined && (
-                <span className={`text-[10px] font-black px-1.5 py-0.5 rounded-full ${activeTab === tab.id ? 'bg-[#2563EB] text-white' : 'bg-gray-100 text-gray-600'}`}>
+                <span className={`text-[10px] font-black px-1.5 py-0.5 rounded-full ${activeTab === tab.id ? 'bg-blue-600 text-white' : 'bg-gray-100 text-gray-600'}`}>
                   {tab.badge}
                 </span>
               )}
@@ -477,7 +479,7 @@ export const CitizenDashboard = () => {
             <div className="md:col-span-2 space-y-3">
               <div className="flex items-center justify-between">
                 <h3 className="section-label text-gray-700">Application Log ({filteredRequests.length})</h3>
-                <button onClick={() => fetchMyRequests(true)} className="text-[#2563EB] text-xs font-bold hover:underline flex items-center gap-1">
+                <button onClick={() => fetchMyRequests(true)} className="text-blue-600 text-xs font-bold hover:underline flex items-center gap-1">
                   <RefreshCw className={`w-3 h-3 ${refreshing ? 'animate-spin' : ''}`} /> Refresh
                 </button>
               </div>
@@ -503,7 +505,7 @@ export const CitizenDashboard = () => {
                 <div className="gov-card p-8 text-center text-xs text-gray-400 space-y-2">
                   <FileText className="w-8 h-8 text-gray-200 mx-auto" />
                   <p className="font-medium">No complaints filed.</p>
-                  <button onClick={() => setActiveTab('apply')} className="text-[#2563EB] font-bold hover:underline">
+                  <button onClick={() => setActiveTab('apply')} className="text-blue-600 font-bold hover:underline">
                     + Apply for a service
                   </button>
                 </div>
@@ -618,7 +620,7 @@ export const CitizenDashboard = () => {
                             step.done ? 'bg-green-500' : 'bg-gray-300'
                           }`} />
                           <div className={`pb-1 ${step.highlight ? 'bg-blue-50 border border-blue-100 rounded-xl p-3 w-full' : ''}`}>
-                            <h5 className={`font-bold text-sm ${step.highlight ? 'text-[#2563EB]' : 'text-gray-800'}`}>{step.title}</h5>
+                            <h5 className={`font-bold text-sm ${step.highlight ? 'text-blue-600' : 'text-gray-800'}`}>{step.title}</h5>
                             <p className="text-xs text-gray-500 mt-0.5 leading-relaxed">{step.sub}</p>
                           </div>
                         </div>
@@ -641,7 +643,7 @@ export const CitizenDashboard = () => {
         ────────────────────────────── */}
         {activeTab === 'apply' && (
           <div className="lg:col-span-3 gov-card p-6">
-            <h3 className="text-base font-black text-gray-900 mb-5 pb-4 border-b border-gray-100" style={{ fontFamily: 'Outfit, sans-serif' }}>
+            <h3 className="text-base font-black text-gray-900 mb-5 pb-4 border-b border-gray-100">
               Apply for Civic Services & Redressals
             </h3>
 
@@ -651,7 +653,7 @@ export const CitizenDashboard = () => {
                   <CheckCircle className="w-8 h-8 text-green-600" />
                 </div>
                 <div>
-                  <h4 className="font-black text-xl text-green-700" style={{ fontFamily: 'Outfit, sans-serif' }}>Ticket Registered!</h4>
+                  <h4 className="font-black text-xl text-green-700">Ticket Registered!</h4>
                   <p className="text-sm text-gray-500 mt-1">Your tracking ID has been generated. Redirecting to timeline…</p>
                 </div>
               </div>
@@ -663,7 +665,7 @@ export const CitizenDashboard = () => {
                   <label className="section-label text-gray-600 block mb-3">Select Service Department</label>
                   <div className="grid grid-cols-2 sm:grid-cols-5 gap-2.5">
                     {[
-                      { id: 'electricity', label: 'Electricity', icon: <Zap className="w-5 h-5 text-[#2563EB]" />,     bg: 'bg-blue-50' },
+                      { id: 'electricity', label: 'Electricity', icon: <Zap className="w-5 h-5 text-blue-600" />,     bg: 'bg-blue-50' },
                       { id: 'water',       label: 'Water',       icon: <Droplet className="w-5 h-5 text-cyan-600" />,   bg: 'bg-cyan-50' },
                       { id: 'gas',         label: 'PNG Gas',     icon: <Flame className="w-5 h-5 text-orange-500" />,   bg: 'bg-orange-50' },
                       { id: 'waste',       label: 'Waste',       icon: <Trash2 className="w-5 h-5 text-green-600" />,   bg: 'bg-green-50' },
@@ -747,7 +749,7 @@ export const CitizenDashboard = () => {
                       type="button"
                       onClick={() => fileInputRef.current.click()}
                       disabled={uploading}
-                      className="flex items-center gap-2 px-4 py-2.5 border-2 border-dashed border-blue-300 bg-blue-50 hover:bg-blue-100 text-[#2563EB] rounded-xl text-sm font-bold transition"
+                      className="flex items-center gap-2 px-4 py-2.5 border-2 border-dashed border-blue-300 bg-blue-50 hover:bg-blue-100 text-blue-600 rounded-xl text-sm font-bold transition"
                     >
                       <UploadCloud className="w-4 h-4" />
                       {uploading ? 'Uploading…' : 'Upload PDF / Image'}
@@ -793,7 +795,7 @@ export const CitizenDashboard = () => {
           <div className="lg:col-span-3 gov-card p-6 space-y-5">
             <div className="flex items-center justify-between pb-4 border-b border-gray-100">
               <div>
-                <h3 className="text-base font-black text-gray-900" style={{ fontFamily: 'Outfit, sans-serif' }}>
+                <h3 className="text-base font-black text-gray-900">
                   DigiLocker Document Vault
                 </h3>
                 <p className="text-xs text-gray-500 mt-0.5">Your verified identity & address documents</p>
@@ -813,7 +815,7 @@ export const CitizenDashboard = () => {
               {vaultDocs.map((doc, i) => (
                 <div key={i} className="flex items-center gap-4 p-4 rounded-xl border border-gray-100 bg-gray-50 hover:bg-white hover:border-gray-200 transition">
                   <div className="w-10 h-10 rounded-xl bg-white border border-gray-200 flex items-center justify-center flex-shrink-0 shadow-sm">
-                    <FileText className="w-5 h-5 text-[#2563EB]" />
+                    <FileText className="w-5 h-5 text-blue-600" />
                   </div>
                   <div className="flex-1 min-w-0">
                     <h5 className="font-bold text-sm text-gray-900 truncate">{doc.name}</h5>
@@ -834,7 +836,7 @@ export const CitizenDashboard = () => {
             </div>
 
             <div className="p-4 bg-blue-50 border border-blue-100 rounded-xl text-xs text-gray-600 flex items-start gap-3">
-              <ShieldCheck className="w-4 h-4 text-[#2563EB] mt-0.5 flex-shrink-0" />
+              <ShieldCheck className="w-4 h-4 text-blue-600 mt-0.5 flex-shrink-0" />
               <p>Documents stored in encrypted DigiLocker-linked vault. Aadhaar data masked at rest. All transfers use 256-bit SSL encryption.</p>
             </div>
           </div>
@@ -849,10 +851,10 @@ export const CitizenDashboard = () => {
             <div className="flex items-center justify-between mb-5 pb-4 border-b border-gray-100">
               <div className="flex items-center gap-3">
                 <div className="w-9 h-9 rounded-xl bg-blue-50 flex items-center justify-center">
-                  <ShieldCheck className="w-5 h-5 text-[#2563EB]" />
+                  <ShieldCheck className="w-5 h-5 text-blue-600" />
                 </div>
                 <div>
-                  <h4 className="font-black text-gray-900 text-sm" style={{ fontFamily: 'Outfit, sans-serif' }}>SUVIDHA Official Receipt</h4>
+                  <h4 className="font-black text-gray-900 text-sm">SUVIDHA Official Receipt</h4>
                   <p className="text-[10px] text-gray-400">Government of India · NIC</p>
                 </div>
               </div>

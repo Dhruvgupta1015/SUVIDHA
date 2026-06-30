@@ -29,7 +29,7 @@ export const LanguageSelector = () => {
         className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-slate-50 border border-slate-200 hover:bg-slate-100 transition-colors flex-shrink-0"
         aria-label="Select Language"
       >
-        <Globe className="w-3.5 h-3.5 text-[#2563EB]" />
+        <Globe className="w-3.5 h-3.5 text-blue-600" />
         <span className="text-xs font-bold text-slate-700 hidden lg:inline">{activeLang.nativeName}</span>
         <span className="text-xs font-bold text-slate-700 lg:hidden">{activeLang.code.toUpperCase()}</span>
         <ChevronDown className={`w-3.5 h-3.5 text-slate-500 transition-transform ${isOpen ? 'rotate-180' : ''}`} />

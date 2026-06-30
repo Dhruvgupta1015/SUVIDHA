@@ -112,7 +112,7 @@ export const AnalyticsPanel = () => {
         <Icon className="w-5 h-5" style={{ color: color.includes('red') ? '#DC2626' : color.includes('amber') ? '#F97316' : color.includes('green') ? '#16A34A' : '#3B82F6' }} />
       </div>
       <div>
-        <p className="text-2xl font-black" style={{ fontFamily: 'Outfit, sans-serif' }}>{value}</p>
+        <p className="text-2xl font-black">{value}</p>
         <p className="text-[10px] font-bold opacity-80">{label}</p>
         {sub && <p className="text-[9px] opacity-60 mt-0.5">{sub}</p>}
       </div>

@@ -24,7 +24,7 @@ const priorityBadge = (p) => {
 };
 
 const serviceIcon = (type) => ({
-  electricity: <Zap className="w-4 h-4 text-[#2563EB]" />,
+  electricity: <Zap className="w-4 h-4 text-blue-600" />,
   water: <Droplet className="w-4 h-4 text-cyan-600" />,
   gas: <Flame className="w-4 h-4 text-orange-500" />,
   waste: <Trash2 className="w-4 h-4 text-green-600" />,
@@ -281,11 +281,11 @@ export const OfficerDashboard = () => {
         <div className="bg-white border border-gray-200 rounded-2xl p-5 flex flex-col sm:flex-row sm:items-center justify-between gap-4 shadow-sm">
           <div className="flex items-center gap-4">
             <div className="w-12 h-12 rounded-xl bg-blue-50 border border-blue-100 flex items-center justify-center flex-shrink-0">
-              <Building2 className="w-6 h-6 text-[#2563EB]" />
+              <Building2 className="w-6 h-6 text-blue-600" />
             </div>
             <div>
               <div className="flex items-center gap-2 flex-wrap">
-                <h2 className="text-base font-black text-gray-900" style={{ fontFamily: 'Outfit, sans-serif' }}>
+                <h2 className="text-base font-black text-gray-900">
                   {currentOfficer.department} Dashboard
                 </h2>
                 {stats.critical > 0 && (
@@ -297,7 +297,7 @@ export const OfficerDashboard = () => {
               <p className="text-xs text-gray-500 mt-0.5">
                 Officer Console · <strong className="text-gray-700">{currentOfficer.name}</strong>
                 <span className="mx-2 text-gray-300">|</span>
-                <span className="text-[#2563EB] font-medium">{currentOfficer.email}</span>
+                <span className="text-blue-600 font-medium">{currentOfficer.email}</span>
               </p>
             </div>
           </div>
@@ -328,7 +328,7 @@ export const OfficerDashboard = () => {
               {s.icon}
             </div>
             <div>
-              <div className="text-xl font-black text-gray-900" style={{ fontFamily: 'Outfit, sans-serif' }}>{s.value}</div>
+              <div className="text-xl font-black text-gray-900">{s.value}</div>
               <div className="text-[10px] text-gray-500 font-medium">{s.label}</div>
             </div>
           </div>
@@ -473,7 +473,7 @@ export const OfficerDashboard = () => {
                           }`}
                       >
                         <td className="px-4 py-3">
-                          <span className="font-mono font-bold text-[#2563EB]">{req.requestId}</span>
+                          <span className="font-mono font-bold text-blue-600">{req.requestId}</span>
                           {req.isEmergency && <span className="ml-1 text-red-600 font-black">🚨</span>}
                         </td>
                         <td className="px-4 py-3">
@@ -595,8 +595,8 @@ export const OfficerDashboard = () => {
               {/* Evidence Review Panel — with officer override actions */}
               {selectedRequest.documents && selectedRequest.documents.length > 0 && (
                 <div className="gov-card p-5 space-y-3">
-                  <h4 className="font-black text-sm text-gray-900 flex items-center gap-2" style={{ fontFamily: 'Outfit, sans-serif' }}>
-                    <FileCheck className="w-4 h-4 text-[#2563EB]" />
+                  <h4 className="font-black text-sm text-gray-900 flex items-center gap-2">
+                    <FileCheck className="w-4 h-4 text-blue-600" />
                     Evidence Review
                     {selectedRequest.documents.some(d => d.flagged) && (
                       <span className="status-badge badge-critical flex items-center gap-1 ml-auto">
@@ -707,8 +707,8 @@ export const OfficerDashboard = () => {
 
               {/* Action form */}
               <div className="gov-card p-5">
-                <h4 className="font-black text-sm text-gray-900 mb-4 flex items-center gap-2" style={{ fontFamily: 'Outfit, sans-serif' }}>
-                  <Send className="w-4 h-4 text-[#2563EB]" />
+                <h4 className="font-black text-sm text-gray-900 mb-4 flex items-center gap-2">
+                  <Send className="w-4 h-4 text-blue-600" />
                   Update Ticket Status
                 </h4>
 

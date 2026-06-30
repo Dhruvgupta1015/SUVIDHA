@@ -101,9 +101,9 @@ export const Auth = () => {
 
   const quickCredentials = [
     { label: 'Citizen User', sub: 'Mobile: 9876543210', key: 'citizen_user', icon: <UserIcon className="w-3.5 h-3.5 text-green-600" />, color: 'text-green-700' },
-    { label: 'Electricity Officer', sub: 'officer.elec@…', key: 'elec_officer', icon: <Building2 className="w-3.5 h-3.5 text-[#2563EB]" />, color: 'text-blue-700' },
-    { label: 'Water Officer', sub: 'officer.water@…', key: 'water_officer', icon: <Building2 className="w-3.5 h-3.5 text-[#2563EB]" />, color: 'text-blue-700' },
-    { label: 'Super Admin', sub: 'admin@suvidha…', key: 'admin', icon: <Shield className="w-3.5 h-3.5 text-[#2563EB]" />, color: 'text-[#2563EB]' },
+    { label: 'Electricity Officer', sub: 'officer.elec@…', key: 'elec_officer', icon: <Building2 className="w-3.5 h-3.5 text-blue-600" />, color: 'text-blue-700' },
+    { label: 'Water Officer', sub: 'officer.water@…', key: 'water_officer', icon: <Building2 className="w-3.5 h-3.5 text-blue-600" />, color: 'text-blue-700' },
+    { label: 'Super Admin', sub: 'admin@suvidha…', key: 'admin', icon: <Shield className="w-3.5 h-3.5 text-blue-600" />, color: 'text-blue-600' },
   ];
 
   return (
@@ -116,10 +116,10 @@ export const Auth = () => {
           {/* Header */}
           <div className="flex items-center gap-4 mb-7 pb-6 border-b border-gray-100">
             <div className="w-12 h-12 rounded-xl bg-blue-50 border border-blue-100 flex items-center justify-center flex-shrink-0">
-              <ShieldCheck className="w-6 h-6 text-[#2563EB]" />
+              <ShieldCheck className="w-6 h-6 text-blue-600" />
             </div>
             <div>
-              <h2 className="text-xl font-black text-gray-900" style={{ fontFamily: 'Outfit, sans-serif' }}>
+              <h2 className="text-xl font-black text-gray-900">
                 Secure Portal Sign-In
               </h2>
               <p className="text-xs text-gray-500 mt-0.5">
@@ -143,7 +143,7 @@ export const Auth = () => {
                 <CheckCircle2 className="w-8 h-8 text-green-600" />
               </div>
               <div>
-                <h3 className="font-black text-xl text-green-700" style={{ fontFamily: 'Outfit, sans-serif' }}>
+                <h3 className="font-black text-xl text-green-700">
                   Sign-In Successful!
                 </h3>
                 <p className="text-sm text-gray-500 mt-1">Loading your secure dashboard…</p>
@@ -163,7 +163,7 @@ export const Auth = () => {
                   onClick={() => { setLoginType('citizen'); setErrorMsg(''); }}
                   className={`flex items-center justify-center gap-2 py-2.5 rounded-lg text-sm font-bold transition ${
                     loginType === 'citizen'
-                      ? 'bg-[#2563EB] text-white shadow-sm'
+                      ? 'bg-blue-600 text-white shadow-sm'
                       : 'text-gray-600 hover:text-gray-900 hover:bg-white'
                   }`}
                 >
@@ -174,7 +174,7 @@ export const Auth = () => {
                   onClick={() => { setLoginType('staff'); setErrorMsg(''); }}
                   className={`flex items-center justify-center gap-2 py-2.5 rounded-lg text-sm font-bold transition ${
                     loginType === 'staff'
-                      ? 'bg-[#2563EB] text-white shadow-sm'
+                      ? 'bg-blue-600 text-white shadow-sm'
                       : 'text-gray-600 hover:text-gray-900 hover:bg-white'
                   }`}
                 >
@@ -349,11 +349,11 @@ export const Auth = () => {
         </div>
 
         {/* ── Right: Developer Credentials Panel ── */}
-        <div className="lg:col-span-2 space-y-4 animate-fade-up" style={{ animationDelay: '0.1s' }}>
+        <div className="lg:col-span-2 space-y-4 animate-fade-up [animation-delay:${2}00ms]">
 
           <div className="bg-white border border-gray-200 rounded-2xl shadow-sm p-6">
             <div className="flex items-center gap-2 mb-4">
-              <KeyRound className="w-4 h-4 text-[#2563EB]" />
+              <KeyRound className="w-4 h-4 text-blue-600" />
               <h4 className="font-black text-sm text-gray-900 uppercase tracking-wider">Demo Credentials</h4>
             </div>
             <p className="text-xs text-gray-500 mb-4 leading-relaxed">
@@ -373,7 +373,7 @@ export const Auth = () => {
                   </div>
                   <div className="flex items-center gap-1.5">
                     <span className={`text-[10px] font-semibold ${cred.color}`}>{cred.sub}</span>
-                    <ArrowRight className="w-3 h-3 text-gray-300 group-hover:text-[#2563EB] transition" />
+                    <ArrowRight className="w-3 h-3 text-gray-300 group-hover:text-blue-600 transition" />
                   </div>
                 </button>
               ))}

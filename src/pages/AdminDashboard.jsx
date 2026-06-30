@@ -276,10 +276,10 @@ export const AdminDashboard = () => {
         <div className="bg-white border border-gray-200 rounded-2xl p-5 flex flex-col sm:flex-row sm:items-center justify-between gap-4 shadow-sm">
           <div className="flex items-center gap-4">
             <div className="w-12 h-12 rounded-xl bg-blue-50 border border-blue-100 flex items-center justify-center flex-shrink-0">
-              <ShieldAlert className="w-6 h-6 text-[#2563EB]" />
+              <ShieldAlert className="w-6 h-6 text-blue-600" />
             </div>
             <div>
-              <h2 className="text-base font-black text-gray-900" style={{ fontFamily: 'Outfit, sans-serif' }}>
+              <h2 className="text-base font-black text-gray-900">
                 Super Administrator Console
               </h2>
               <p className="text-xs text-gray-500 mt-0.5">
@@ -363,7 +363,7 @@ export const AdminDashboard = () => {
                   <div className="p-4 rounded-2xl border-2 border-red-300 bg-red-50 animate-fade-in">
                     <div className="flex items-center gap-2 mb-3">
                       <span className="text-xl">🚨</span>
-                      <h4 className="font-black text-red-700 text-sm" style={{ fontFamily: 'Outfit, sans-serif' }}>Immediate Attention Required</h4>
+                      <h4 className="font-black text-red-700 text-sm">Immediate Attention Required</h4>
                       <span className="ml-auto text-[10px] text-red-500 font-bold uppercase tracking-wider animate-pulse">LIVE</span>
                     </div>
                     <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
@@ -374,7 +374,7 @@ export const AdminDashboard = () => {
                         { label: '⚠️ SLA Breached',        value: critical.length,     color: 'text-amber-700 bg-amber-100 border-amber-200' },
                       ].map(c => (
                         <div key={c.label} className={`p-3 rounded-xl border text-center ${c.color}`}>
-                          <div className="text-2xl font-black" style={{ fontFamily: 'Outfit, sans-serif' }}>{c.value}</div>
+                          <div className="text-2xl font-black">{c.value}</div>
                           <div className="text-[10px] font-bold mt-0.5">{c.label}</div>
                         </div>
                       ))}
@@ -461,7 +461,7 @@ export const AdminDashboard = () => {
                         return (
                           <div key={ticket.requestId} className={`p-3 border rounded-xl flex justify-between items-center text-xs ${tierColor}`}>
                             <div>
-                              <span className="font-mono font-bold text-[#2563EB]">{ticket.requestId}</span>
+                              <span className="font-mono font-bold text-blue-600">{ticket.requestId}</span>
                               {ticket.isEmergency && <span className="ml-1">🚨</span>}
                               <span className="text-[10px] text-gray-500 capitalize block mt-0.5">
                                 {ticket.serviceType} · {ticket.citizenId?.name || 'Aadhaar User'}
@@ -681,12 +681,12 @@ export const AdminDashboard = () => {
                   <div className="space-y-1.5">
                     <div className="flex justify-between items-center text-xs font-semibold">
                       <span className="flex items-center gap-1.5 text-gray-600">
-                        <Cpu className="w-4 h-4 text-[#2563EB]" /> Qualcomm Edge AI CPU
+                        <Cpu className="w-4 h-4 text-blue-600" /> Qualcomm Edge AI CPU
                       </span>
                       <span className="font-bold text-gray-900">{cpuLoad}%</span>
                     </div>
                     <div className="w-full bg-gray-100 h-2 rounded-full overflow-hidden">
-                      <div className="bg-[#2563EB] h-full transition-all duration-300" style={{ width: `${cpuLoad}%` }} />
+                      <div className="bg-blue-600 h-full transition-all duration-300" style={{ width: `${cpuLoad}%` }} />
                     </div>
                   </div>
 

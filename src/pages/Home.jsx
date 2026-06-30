@@ -49,7 +49,7 @@ const StatCard = ({ label, value, suffix = '', prefix = '', icon: Icon, color })
         <Icon className="w-6 h-6" />
       </div>
       <div>
-        <div className="text-3xl font-black text-gray-900" style={{ fontFamily: 'Outfit, sans-serif' }}>
+        <div className="text-3xl font-black text-gray-900">
           {prefix}{count.toLocaleString('en-IN')}{suffix}
         </div>
         <div className="text-sm text-gray-500 font-medium mt-0.5">{label}</div>
@@ -67,9 +67,9 @@ const FaqItem = ({ q, a }) => {
         onClick={() => setOpen(o => !o)}
         className="w-full px-6 py-4 flex items-center justify-between text-left gap-4"
       >
-        <span className="font-semibold text-[#0F172A] text-sm leading-relaxed">{q}</span>
+        <span className="font-semibold text-slate-900 text-sm leading-relaxed">{q}</span>
         {open
-          ? <ChevronUp className="w-4 h-4 text-[#2563EB] flex-shrink-0" />
+          ? <ChevronUp className="w-4 h-4 text-blue-600 flex-shrink-0" />
           : <ChevronDown className="w-4 h-4 text-slate-400 flex-shrink-0" />}
       </button>
       {open && (
@@ -125,7 +125,7 @@ export const Home = () => {
   };
 
   const services = [
-    { icon: <Zap className="w-5 h-5 text-[#2563EB]" />, iconBg: 'bg-blue-50', desc: 'New meter connections, power outage complaints, meter repair requests.', id: 'electricity', title: 'Electricity Connection', hi: 'बिजली कनेक्शन', sla: '48 Hrs' },
+    { icon: <Zap className="w-5 h-5 text-blue-600" />, iconBg: 'bg-blue-50', desc: 'New meter connections, power outage complaints, meter repair requests.', id: 'electricity', title: 'Electricity Connection', hi: 'बिजली कनेक्शन', sla: '48 Hrs' },
     { icon: <Droplet className="w-5 h-5 text-cyan-600" />, iconBg: 'bg-cyan-50', desc: 'Pipe leaks, municipal water supply lines, pressure issues.', id: 'water', title: 'Water Supply', hi: 'पानी कनेक्शन', sla: '24 Hrs' },
     { icon: <Flame className="w-5 h-5 text-orange-600" />, iconBg: 'bg-orange-50', desc: 'PNG meter repairs, gas line inspection, pressure complaints.', id: 'gas', title: 'PNG Gas Connection', hi: 'पीएनजी गैस', sla: '48 Hrs' },
     { icon: <Trash2 className="w-5 h-5 text-green-600" />, iconBg: 'bg-green-50', desc: 'Garbage collection, debris removal, sewage blockage complaints.', id: 'waste', title: 'Waste Management', hi: 'कचरा प्रबंधन', sla: '24 Hrs' },
@@ -140,11 +140,11 @@ export const Home = () => {
   ];
 
   const whyPoints = [
-    { icon: <ShieldCheck className="w-5 h-5 text-[#2563EB]" />, title: '100% Verified', desc: 'Aadhaar-linked identity verification for all registered citizens.', proofTitle: 'Trust verification proof', proofs: ['Aadhaar verification workflow', 'Mobile OTP validation', 'Citizen identity authentication', 'Secure registration proof'] },
-    { icon: <Clock className="w-5 h-5 text-[#2563EB]" />, title: 'SLA Guaranteed', desc: 'All requests are bound by time-mandate SLA with automatic escalation.', proofTitle: 'Service commitment proof', proofs: ['Time-bound service resolution', 'Auto escalation system', 'Deadline enforcement', 'Department accountability'] },
-    { icon: <Activity className="w-5 h-5 text-[#2563EB]" />, title: 'Real-Time Tracking', desc: 'Live WebSocket updates keep you informed at every stage.', proofTitle: 'Transparency proof', proofs: ['WebSocket live updates', 'Status checkpoints', 'Push notifications', 'Real-time progress logs'] },
-    { icon: <Layers className="w-5 h-5 text-[#2563EB]" />, title: 'Multi-Department', desc: 'Electricity, Water, Gas, Waste & General — all on one platform.', proofTitle: 'Coverage proof', proofs: ['Electricity', 'Water', 'Gas', 'Waste Management', 'Civic Complaints'] },
-    { icon: <Globe className="w-5 h-5 text-[#2563EB]" />, title: '12 Languages', desc: 'Available in Hindi, English, and 10 other regional languages.', proofTitle: 'Accessibility proof', proofs: [
+    { icon: <ShieldCheck className="w-5 h-5 text-blue-600" />, title: '100% Verified', desc: 'Aadhaar-linked identity verification for all registered citizens.', proofTitle: 'Trust verification proof', proofs: ['Aadhaar verification workflow', 'Mobile OTP validation', 'Citizen identity authentication', 'Secure registration proof'] },
+    { icon: <Clock className="w-5 h-5 text-blue-600" />, title: 'SLA Guaranteed', desc: 'All requests are bound by time-mandate SLA with automatic escalation.', proofTitle: 'Service commitment proof', proofs: ['Time-bound service resolution', 'Auto escalation system', 'Deadline enforcement', 'Department accountability'] },
+    { icon: <Activity className="w-5 h-5 text-blue-600" />, title: 'Real-Time Tracking', desc: 'Live WebSocket updates keep you informed at every stage.', proofTitle: 'Transparency proof', proofs: ['WebSocket live updates', 'Status checkpoints', 'Push notifications', 'Real-time progress logs'] },
+    { icon: <Layers className="w-5 h-5 text-blue-600" />, title: 'Multi-Department', desc: 'Electricity, Water, Gas, Waste & General — all on one platform.', proofTitle: 'Coverage proof', proofs: ['Electricity', 'Water', 'Gas', 'Waste Management', 'Civic Complaints'] },
+    { icon: <Globe className="w-5 h-5 text-blue-600" />, title: '12 Languages', desc: 'Available in Hindi, English, and 10 other regional languages.', proofTitle: 'Accessibility proof', proofs: [
       { label: 'Hindi', code: 'hi' },
       { label: 'English', code: 'en' },
       { label: 'Kannada', code: 'kn' },
@@ -158,7 +158,7 @@ export const Home = () => {
       { label: 'Urdu', code: 'ur' },
       { label: 'Odia', code: 'or' }
     ] },
-    { icon: <Award className="w-5 h-5 text-[#2563EB]" />, title: 'ISO 27001', desc: 'Certified data security and privacy standards compliant.', proofTitle: 'Security proof', proofs: ['End-to-end encryption', 'Secure data storage', 'Audit logs', 'Compliance monitoring', 'Privacy-first architecture'] },
+    { icon: <Award className="w-5 h-5 text-blue-600" />, title: 'ISO 27001', desc: 'Certified data security and privacy standards compliant.', proofTitle: 'Security proof', proofs: ['End-to-end encryption', 'Secure data storage', 'Audit logs', 'Compliance monitoring', 'Privacy-first architecture'] },
   ];
 
   const faqs = [
@@ -276,7 +276,7 @@ export const Home = () => {
             Official Grievance & Service Delivery Portal
           </div>
 
-          <h1 className="text-3xl md:text-5xl font-black text-white tracking-tight mb-5 leading-tight" style={{ fontFamily: 'Outfit, sans-serif' }}>
+          <h1 className="text-3xl md:text-5xl font-black text-white tracking-tight mb-5 leading-tight">
             Government Citizen Services<br />
             <span className="text-blue-100">&amp; Grievance Registry</span>
           </h1>
@@ -288,7 +288,7 @@ export const Home = () => {
           <div className="flex flex-wrap gap-3 justify-center mb-10">
             <button
               onClick={() => navigate('/auth?role=citizen')}
-              className="flex items-center gap-2 px-7 py-3 bg-[#1E3A8A] hover:bg-[#172554] text-white font-black text-sm rounded-xl shadow-lg hover:shadow-xl transition hover:scale-105 active:scale-95"
+              className="flex items-center gap-2 px-7 py-3 bg-blue-900 hover:bg-[#172554] text-white font-black text-sm rounded-xl shadow-lg hover:shadow-xl transition hover:scale-105 active:scale-95"
             >
               <Users className="w-4 h-4" />
               Citizen Portal — नागरिक लॉग-इन
@@ -311,7 +311,7 @@ export const Home = () => {
               { val: '4.8', suffix: '/5', label: 'Citizen Rating' },
             ].map(s => (
               <div key={s.label} className="text-center">
-                <div className="text-2xl font-black text-white" style={{ fontFamily: 'Outfit, sans-serif' }}>
+                <div className="text-2xl font-black text-white">
                   {s.val}{s.suffix}
                 </div>
                 <div className="text-[11px] text-blue-200 font-medium">{s.label}</div>
@@ -324,10 +324,10 @@ export const Home = () => {
       {/* ══════════════════════════════════════
           QUICK TRACK GRIEVANCE
       ══════════════════════════════════════ */}
-      <section className="max-w-2xl mx-auto w-full mb-10 animate-fade-up" style={{ animationDelay: '0.1s' }}>
+      <section className="max-w-2xl mx-auto w-full mb-10 animate-fade-up [animation-delay:${2}00ms]">
         <div className="gov-card p-6">
           <h3 className="section-label flex items-center gap-2 mb-4 text-slate-700">
-            <Search className="w-4 h-4 text-[#2563EB]" />
+            <Search className="w-4 h-4 text-blue-600" />
             Track Grievance Status · शिकायत की स्थिति जांचें
           </h3>
           <form onSubmit={handleSearchSubmit} className="flex gap-2.5">
@@ -386,8 +386,8 @@ export const Home = () => {
       ══════════════════════════════════════ */}
       <section className="mb-12 animate-fade-up" style={{ animationDelay: '0.15s' }}>
         <div className="mb-6">
-          <p className="section-label text-[#2563EB] mb-1">Available Services</p>
-          <h2 className="text-2xl font-black text-[#0F172A]" style={{ fontFamily: 'Outfit, sans-serif' }}>
+          <p className="section-label text-blue-600 mb-1">Available Services</p>
+          <h2 className="text-2xl font-black text-slate-900">
             Citizen Utility Service Counters
           </h2>
           <p className="text-sm text-slate-500 mt-1">
@@ -406,13 +406,13 @@ export const Home = () => {
                 </span>
               </div>
               <div>
-                <h4 className="font-bold text-[#0F172A] text-sm">{svc.title}</h4>
+                <h4 className="font-bold text-slate-900 text-sm">{svc.title}</h4>
                 <span className="text-[10px] text-slate-400 font-medium">{svc.hi}</span>
                 <p className="text-xs text-slate-500 mt-2 leading-relaxed">{svc.desc}</p>
               </div>
               <Link
                 to="/auth?role=citizen"
-                className="w-full text-center py-2.5 bg-blue-50 hover:bg-[#2563EB] hover:text-white text-[#2563EB] border border-blue-200 hover:border-[#2563EB] rounded-lg text-xs font-bold transition flex items-center justify-center gap-1.5"
+                className="w-full text-center py-2.5 bg-blue-50 hover:bg-blue-600 hover:text-white text-blue-600 border border-blue-200 hover:border-[#2563EB] rounded-lg text-xs font-bold transition flex items-center justify-center gap-1.5"
                 onClick={e => e.stopPropagation()}
               >
                 Apply for Service <ArrowRight className="w-3.5 h-3.5" />
@@ -425,10 +425,10 @@ export const Home = () => {
       {/* ══════════════════════════════════════
           HOW IT WORKS
       ══════════════════════════════════════ */}
-      <section className="mb-12 animate-fade-up" style={{ animationDelay: '0.2s' }}>
+      <section className="mb-12 animate-fade-up [animation-delay:${2}00ms]">
         <div className="mb-6">
-          <p className="section-label text-[#2563EB] mb-1">Simple Process</p>
-          <h2 className="text-2xl font-black text-[#0F172A]" style={{ fontFamily: 'Outfit, sans-serif' }}>
+          <p className="section-label text-blue-600 mb-1">Simple Process</p>
+          <h2 className="text-2xl font-black text-slate-900">
             How It Works · यह कैसे कार्य करता है
           </h2>
         </div>
@@ -440,14 +440,14 @@ export const Home = () => {
               onClick={() => setActiveStepPopup(activeStepPopup === step.n ? null : step.n)}
             >
               <div className="flex items-center gap-3 mb-4">
-                <div className="w-10 h-10 rounded-xl bg-[#2563EB] flex items-center justify-center flex-shrink-0">
+                <div className="w-10 h-10 rounded-xl bg-blue-600 flex items-center justify-center flex-shrink-0">
                   {step.icon}
                 </div>
-                <span className="text-4xl font-black text-slate-300 opacity-30 absolute top-3 right-4 pointer-events-none" style={{ fontFamily: 'Outfit, sans-serif' }}>
+                <span className="text-4xl font-black text-slate-300 opacity-30 absolute top-3 right-4 pointer-events-none">
                   {step.n}
                 </span>
               </div>
-              <h5 className="font-bold text-[#0F172A] text-sm mb-2">{step.title}</h5>
+              <h5 className="font-bold text-slate-900 text-sm mb-2">{step.title}</h5>
               <p className="text-xs text-slate-500 leading-relaxed">{step.desc}</p>
               {idx < steps.length - 1 && (
                 <div className="hidden lg:block absolute top-1/2 -right-3 z-10 pointer-events-none">
@@ -465,7 +465,7 @@ export const Home = () => {
                 <ul className="space-y-2">
                   {step.popup.map((item, i) => (
                     <li key={i} className="flex items-start gap-2 text-xs text-slate-600 leading-snug">
-                      <CheckCircle2 className="w-3.5 h-3.5 text-[#2563EB] flex-shrink-0 mt-0.5" />
+                      <CheckCircle2 className="w-3.5 h-3.5 text-blue-600 flex-shrink-0 mt-0.5" />
                       {item}
                     </li>
                   ))}
@@ -481,8 +481,8 @@ export const Home = () => {
       ══════════════════════════════════════ */}
       <section className="mb-12 animate-fade-up" style={{ animationDelay: '0.25s' }}>
         <div className="mb-6">
-          <p className="section-label text-[#2563EB] mb-1">Our Advantages</p>
-          <h2 className="text-2xl font-black text-[#0F172A]" style={{ fontFamily: 'Outfit, sans-serif' }}>
+          <p className="section-label text-blue-600 mb-1">Our Advantages</p>
+          <h2 className="text-2xl font-black text-slate-900">
             Why Choose SUVIDHA
           </h2>
           <p className="text-sm text-slate-500 mt-1">
@@ -501,7 +501,7 @@ export const Home = () => {
                   {pt.icon}
                 </div>
                 <div>
-                  <h4 className="font-bold text-[#0F172A] text-sm mb-1">{pt.title}</h4>
+                  <h4 className="font-bold text-slate-900 text-sm mb-1">{pt.title}</h4>
                   <p className="text-xs text-slate-500 leading-relaxed">{pt.desc}</p>
                 </div>
               </div>
@@ -525,7 +525,7 @@ export const Home = () => {
                         className={`flex items-start gap-2 text-xs leading-snug ${isLang ? 'cursor-pointer hover:text-blue-600 transition-colors' : ''} ${isActive ? 'font-semibold text-blue-700' : 'text-slate-600'}`}
                         onClick={isLang ? (e) => { e.stopPropagation(); changeLanguage(item.code); } : undefined}
                       >
-                        <CheckCircle2 className="w-3.5 h-3.5 text-[#2563EB] flex-shrink-0 mt-0.5" />
+                        <CheckCircle2 className="w-3.5 h-3.5 text-blue-600 flex-shrink-0 mt-0.5" />
                         {text}
                       </li>
                     );
@@ -540,17 +540,17 @@ export const Home = () => {
       {/* ══════════════════════════════════════
           LIVE STATISTICS
       ══════════════════════════════════════ */}
-      <section className="mb-12 animate-fade-up" style={{ animationDelay: '0.3s' }}>
+      <section className="mb-12 animate-fade-up [animation-delay:${2}00ms]">
         <div className="mb-6">
-          <p className="section-label text-[#2563EB] mb-1">Impact So Far</p>
-          <h2 className="text-2xl font-black text-[#0F172A]" style={{ fontFamily: 'Outfit, sans-serif' }}>
+          <p className="section-label text-blue-600 mb-1">Impact So Far</p>
+          <h2 className="text-2xl font-black text-slate-900">
             Live Statistics · प्रणाली आँकड़े
           </h2>
           <p className="text-sm text-slate-500 mt-1">Real-time platform metrics from the National SUVIDHA Registry.</p>
         </div>
         <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
           <StatCard label="Requests Resolved" value={241389} suffix="+" icon={CheckCircle2} color="bg-green-50 text-green-600" />
-          <StatCard label="Active Officers" value={847} icon={UserCheck} color="bg-blue-50 text-[#2563EB]" />
+          <StatCard label="Active Officers" value={847} icon={UserCheck} color="bg-blue-50 text-blue-600" />
           <StatCard label="Departments Served" value={5} icon={Building2} color="bg-purple-50 text-purple-600" />
           <StatCard label="Citizen Satisfaction" value={96} suffix="%" icon={Star} color="bg-amber-50 text-amber-600" />
         </div>
@@ -561,8 +561,8 @@ export const Home = () => {
       ══════════════════════════════════════ */}
       <section className="mb-12 animate-fade-up" style={{ animationDelay: '0.35s' }}>
         <div className="mb-6">
-          <p className="section-label text-[#2563EB] mb-1">Multi-Role Access</p>
-          <h2 className="text-2xl font-black text-[#0F172A]" style={{ fontFamily: 'Outfit, sans-serif' }}>
+          <p className="section-label text-blue-600 mb-1">Multi-Role Access</p>
+          <h2 className="text-2xl font-black text-slate-900">
             Official Portal Access · आधिकारिक पोर्टल
           </h2>
           <p className="text-sm text-slate-500 mt-1">
@@ -605,7 +605,7 @@ export const Home = () => {
             <div>
               <div className="flex items-center gap-3 mb-3">
                 <div className="w-10 h-10 rounded-xl bg-blue-50 flex items-center justify-center">
-                  <Building2 className="w-5 h-5 text-[#2563EB]" />
+                  <Building2 className="w-5 h-5 text-blue-600" />
                 </div>
                 <div>
                   <h4 className="font-bold text-gray-900 text-sm">Officer Desk</h4>
@@ -622,7 +622,7 @@ export const Home = () => {
             </div>
             <button
               onClick={() => navigate('/auth?role=officer')}
-              className="w-full py-2.5 border-2 border-[#2563EB] text-[#2563EB] hover:bg-[#2563EB] hover:text-white rounded-xl text-sm font-bold transition flex items-center justify-center gap-2"
+              className="w-full py-2.5 border-2 border-[#2563EB] text-blue-600 hover:bg-blue-600 hover:text-white rounded-xl text-sm font-bold transition flex items-center justify-center gap-2"
             >
               <Building2 className="w-4 h-4" />
               Officer Sign-In
@@ -661,7 +661,7 @@ export const Home = () => {
 
         {/* T7: Judge Demo Credentials */}
         <div className="mt-6 p-5 border-2 border-dashed border-blue-300 bg-blue-50 rounded-xl animate-fade-in">
-          <h4 className="font-bold text-[#0F172A] text-sm flex items-center gap-2 mb-3">
+          <h4 className="font-bold text-slate-900 text-sm flex items-center gap-2 mb-3">
             <ShieldCheck className="w-4 h-4 text-blue-600" /> Hackathon Judge Demo Credentials
           </h4>
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
@@ -684,7 +684,7 @@ export const Home = () => {
       {/* ══════════════════════════════════════
           QUALCOMM / HACKATHON SECTION
       ══════════════════════════════════════ */}
-      <section className="mb-12 animate-fade-up" style={{ animationDelay: '0.4s' }}>
+      <section className="mb-12 animate-fade-up [animation-delay:${2}00ms]">
         <div className="rounded-xl p-7 text-white overflow-hidden relative" style={{ background: 'linear-gradient(to right, #1E3A8A, #1D4ED8)', border: 'none' }}>
           <div className="absolute inset-0 opacity-10" style={{
             backgroundImage: 'radial-gradient(circle at 80% 50%, white 1px, transparent 1px)',
@@ -696,7 +696,7 @@ export const Home = () => {
                 <Star className="w-3 h-3" />
                 Qualcomm Snapdragon Multiverse Hackathon 2026
               </div>
-              <h3 className="text-xl font-black mb-3" style={{ fontFamily: 'Outfit, sans-serif', color: '#FFFFFF' }}>
+              <h3 className="text-xl font-black mb-3" style={{ color: '#FFFFFF' }}>
                 The SUVIDHA Multiverse Architecture
               </h3>
               <p className="text-sm leading-relaxed" style={{ color: 'rgba(255,255,255,0.85)' }}>
@@ -754,8 +754,8 @@ export const Home = () => {
       ══════════════════════════════════════ */}
       <section className="mb-12 animate-fade-up" style={{ animationDelay: '0.45s' }}>
         <div className="mb-6">
-          <p className="section-label text-[#2563EB] mb-1">Common Questions</p>
-          <h2 className="text-2xl font-black text-[#0F172A]" style={{ fontFamily: 'Outfit, sans-serif' }}>
+          <p className="section-label text-blue-600 mb-1">Common Questions</p>
+          <h2 className="text-2xl font-black text-slate-900">
             Frequently Asked Questions
           </h2>
         </div>
@@ -769,17 +769,17 @@ export const Home = () => {
       {/* ══════════════════════════════════════
           CONTACT / HELPDESK
       ══════════════════════════════════════ */}
-      <section className="mb-4 animate-fade-up" style={{ animationDelay: '0.5s' }}>
+      <section className="mb-4 animate-fade-up [animation-delay:${2}00ms]">
         <div className="mb-6">
-          <p className="section-label text-[#2563EB] mb-1">Get Help</p>
-          <h2 className="text-2xl font-black text-[#0F172A]" style={{ fontFamily: 'Outfit, sans-serif' }}>
+          <p className="section-label text-blue-600 mb-1">Get Help</p>
+          <h2 className="text-2xl font-black text-slate-900">
             Contact & Helpdesk · संपर्क एवं सहायता
           </h2>
         </div>
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
           {[
             {
-              icon: <Phone className="w-5 h-5 text-[#2563EB]" />,
+              icon: <Phone className="w-5 h-5 text-blue-600" />,
               bg: 'bg-blue-50 border-blue-100',
               title: 'National Helpline',
               body: (

@@ -87,7 +87,7 @@ export const DemoModePanel = ({ onScenarioCreated }) => {
           <Zap className="w-5 h-5 text-white" />
         </div>
         <div>
-          <h4 className="font-black text-gray-900 text-sm" style={{ fontFamily: 'Outfit, sans-serif' }}>
+          <h4 className="font-black text-gray-900 text-sm">
             🎬 Demo Mode Engine
           </h4>
           <p className="text-[10px] text-purple-700 font-medium">Instant hackathon scenarios — for judges</p>
