@@ -78,7 +78,9 @@ export const Auth = () => {
     if (!email || !password) { setErrorMsg('Please enter email and password'); return; }
     setLoading(true); setErrorMsg('');
     try {
-      const response = await authAPI.staffLogin({ email, password });
+      const payload = { email: email.trim(), password: password.trim() };
+      console.log('Staff login payload:', payload);
+      const response = await authAPI.staffLogin(payload);
       const { token, user } = response.data;
       localStorage.setItem('token', token); localStorage.setItem('user', JSON.stringify(user));
       setLoading(false); setSuccess(true);

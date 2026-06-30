@@ -3,7 +3,14 @@ import dotenv from 'dotenv';
 import User from './models/User.js';
 import Request from './models/Request.js';
 
-dotenv.config({ path: './backend/.env' });
+import path from 'path';
+import { fileURLToPath } from 'url';
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
+
+// Always load .env relative to this file (backend/.env), regardless of CWD
+dotenv.config({ path: path.resolve(__dirname, '.env') });
 
 console.log("Mongo URI:", process.env.MONGO_URI);
 const mongoUri = process.env.MONGO_URI || 'mongodb://localhost:27017/suvidha';

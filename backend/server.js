@@ -6,7 +6,8 @@ import dotenv from 'dotenv';
 import path from 'path';
 import { fileURLToPath } from 'url';
 
-import './seed.js';
+// NOTE: seed.js must be run MANUALLY via: node backend/seed.js
+// Never import seed.js here — it drops the entire DB on every server restart!
 
 // Configurations
 import connectDB from './config/db.js';

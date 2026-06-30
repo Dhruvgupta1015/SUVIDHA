@@ -113,10 +113,14 @@ export const verifyOtp = async (req, res) => {
  */
 export const staffLogin = async (req, res) => {
   try {
+    console.log('[SUVIDHA] Incoming staff login body:', req.body);
+
     const { email, password } = req.body;
 
     const emailClean = email?.trim().toLowerCase();
     const passwordClean = password?.trim();
+
+    console.log('[SUVIDHA] Resolved credentials — email:', emailClean, '| password length:', passwordClean?.length);
 
     if (!emailClean || !passwordClean) {
       return res.status(400).json({
