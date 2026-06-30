@@ -3,14 +3,20 @@ import dotenv from 'dotenv';
 import User from './models/User.js';
 import Request from './models/Request.js';
 
-dotenv.config();
+dotenv.config({ path: './backend/.env' });
 
+console.log("Mongo URI:", process.env.MONGO_URI);
 const mongoUri = process.env.MONGO_URI || 'mongodb://localhost:27017/suvidha';
 
 const seedData = async () => {
   try {
     console.log(`Connecting to MongoDB for seeding: ${mongoUri}`);
-    await mongoose.connect(mongoUri);
+    await mongoose.connect(mongoUri, {
+      serverSelectionTimeoutMS: 10000,
+      socketTimeoutMS: 45000,
+      maxPoolSize: 10,
+      family: 4
+    });
     console.log('Connected! Dropping existing records...');
 
     // Clear old data

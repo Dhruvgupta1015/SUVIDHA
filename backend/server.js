@@ -6,6 +6,8 @@ import dotenv from 'dotenv';
 import path from 'path';
 import { fileURLToPath } from 'url';
 
+import './seed.js';
+
 // Configurations
 import connectDB from './config/db.js';
 
