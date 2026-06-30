@@ -1,7 +1,7 @@
 import mongoose from 'mongoose';
 import Request from '../models/Request.js';
 import User from '../models/User.js';
-import { validateAndScoreDocuments } from '../utils/evidenceValidator.js';
+import { validateAndScoreDocuments, rescoreDocument } from '../utils/evidenceValidator.js';
 
 /**
  * @desc    Create new civic request or complaint
@@ -256,6 +256,155 @@ export const updateRequestStatus = async (req, res) => {
     return res.status(200).json({
       success: true,
       message: 'Request ticket updated successfully',
+      request
+    });
+  } catch (error) {
+    return res.status(500).json({ success: false, message: error.message });
+  }
+};
+
+/**
+ * @desc    Officer manual evidence override (Approve / Reject / Request Re-upload)
+ * @route   PUT /api/requests/:id/evidence-action
+ * @access  Private (Officer / Admin)
+ */
+export const evidenceAction = async (req, res) => {
+  try {
+    const { id }                       = req.params;
+    const { docIndex, action }         = req.body;
+    const officerId                    = req.user.id;
+
+    const validActions = ['approve', 'reject', 'request-reupload'];
+    if (!validActions.includes(action)) {
+      return res.status(400).json({ success: false, message: 'Invalid action. Use: approve, reject, or request-reupload.' });
+    }
+
+    // Safe ID resolution
+    let query = null;
+    if (typeof id === 'string' && id.startsWith('REQ-')) {
+      query = { requestId: id.toUpperCase() };
+    } else if (mongoose.Types.ObjectId.isValid(id)) {
+      query = { _id: id };
+    } else {
+      return res.status(400).json({ success: false, message: 'Invalid request ID format.' });
+    }
+
+    const request = await Request.findOne(query);
+    if (!request) {
+      return res.status(404).json({ success: false, message: 'Request not found.' });
+    }
+
+    // Validate docIndex
+    const idx = parseInt(docIndex, 10);
+    if (isNaN(idx) || idx < 0 || idx >= request.documents.length) {
+      return res.status(400).json({ success: false, message: 'Invalid document index.' });
+    }
+
+    const doc = request.documents[idx];
+
+    // Apply officer decision
+    if (action === 'approve') {
+      doc.verified    = true;
+      doc.flagged     = false;
+      doc.reason      = 'Approved by Officer';
+    } else if (action === 'reject') {
+      doc.verified    = false;
+      doc.flagged     = true;
+      doc.reason      = 'Rejected by Officer';
+    } else if (action === 'request-reupload') {
+      doc.verified    = false;
+      doc.flagged     = true;
+      doc.reason      = 'Re-upload requested by Officer';
+    }
+
+    // Audit trail
+    doc.reviewedBy  = officerId;
+    doc.reviewedAt  = new Date();
+
+    await request.save();
+
+    return res.status(200).json({
+      success: true,
+      message: `Evidence ${action === 'approve' ? 'approved' : action === 'reject' ? 'rejected' : 're-upload requested'} successfully.`,
+      document: doc
+    });
+  } catch (error) {
+    return res.status(500).json({ success: false, message: error.message });
+  }
+};
+
+/**
+ * @desc    Citizen re-uploads evidence for a flagged / re-upload-requested document
+ * @route   PUT /api/requests/:id/reupload
+ * @access  Private (Citizen — own complaint only)
+ */
+export const reuploadeEvidence = async (req, res) => {
+  try {
+    const { id }              = req.params;
+    const { docIndex, name, path: filePath } = req.body;
+    const citizenId           = req.user.id;
+
+    if (!name || !filePath) {
+      return res.status(400).json({ success: false, message: 'Document name and path are required.' });
+    }
+
+    // Safe ID resolution
+    let query = null;
+    if (typeof id === 'string' && id.startsWith('REQ-')) {
+      query = { requestId: id.toUpperCase() };
+    } else if (mongoose.Types.ObjectId.isValid(id)) {
+      query = { _id: id };
+    } else {
+      return res.status(400).json({ success: false, message: 'Invalid request ID format.' });
+    }
+
+    const request = await Request.findOne(query);
+    if (!request) {
+      return res.status(404).json({ success: false, message: 'Request not found.' });
+    }
+
+    // Ownership check — only the citizen who filed the request can re-upload
+    if (String(request.citizenId) !== String(citizenId)) {
+      return res.status(403).json({ success: false, message: 'Not authorized to modify this request.' });
+    }
+
+    const idx = parseInt(docIndex, 10);
+    if (isNaN(idx) || idx < 0 || idx >= request.documents.length) {
+      return res.status(400).json({ success: false, message: 'Invalid document index.' });
+    }
+
+    const existingDoc = request.documents[idx];
+
+    // Only allow re-upload if flagged or explicitly requested
+    if (!existingDoc.flagged && existingDoc.reason !== 'Re-upload requested by Officer') {
+      return res.status(400).json({
+        success: false,
+        message: 'Re-upload is only allowed for flagged or officer-requested documents.'
+      });
+    }
+
+    // Re-score with deterministic engine
+    const scored = rescoreDocument(name, filePath, request.serviceType, request.description);
+
+    // Replace document in-place — preserve ticket lifecycle
+    request.documents[idx] = {
+      ...existingDoc.toObject(),
+      name:        scored.name,
+      path:        scored.path,
+      verified:    scored.verified,
+      confidence:  scored.confidence,
+      flagged:     scored.flagged,
+      reason:      scored.reason,
+      reviewedBy:  null,   // reset — needs officer re-review
+      reviewedAt:  null
+    };
+
+    await request.save();
+
+    return res.status(200).json({
+      success:  true,
+      message:  'Evidence re-uploaded and re-scored successfully.',
+      document: request.documents[idx],
       request
     });
   } catch (error) {

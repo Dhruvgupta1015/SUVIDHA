@@ -59,6 +59,9 @@ export const OfficerDashboard = () => {
   const [remarksVal, setRemarksVal] = useState('');
   const [submitting, setSubmitting] = useState(false);
 
+  /* Evidence override */
+  const [evidenceSubmitting, setEvidenceSubmitting] = useState(false);
+
   /* ─── Auth guard ─── */
   useEffect(() => {
     const token = localStorage.getItem('token');
@@ -160,6 +163,35 @@ export const OfficerDashboard = () => {
       setSubmitting(false);
     }
   };
+
+  /* ─── Evidence override (approve / reject / request-reupload) ─── */
+  const handleEvidenceAction = async (docIndex, action) => {
+    if (!selectedRequest || evidenceSubmitting) return;
+    setEvidenceSubmitting(true);
+    setErrorMsg('');
+    try {
+      const res = await requestAPI.evidenceAction(selectedRequest.requestId, { docIndex, action });
+      if (res.data?.success && res.data.document) {
+        // Update document in local state immediately
+        setSelectedRequest(prev => {
+          const docs = [...prev.documents];
+          docs[docIndex] = { ...docs[docIndex], ...res.data.document };
+          return { ...prev, documents: docs };
+        });
+        setAllRequests(prev => prev.map(r =>
+          r.requestId === selectedRequest.requestId
+            ? { ...r, documents: r.documents.map((d, i) => i === docIndex ? { ...d, ...res.data.document } : d) }
+            : r
+        ));
+        speak(`Evidence ${action === 'approve' ? 'approved' : action === 'reject' ? 'rejected' : 're-upload requested'}`);
+      }
+    } catch (err) {
+      setErrorMsg(err.friendlyMessage || 'Evidence action failed.');
+    } finally {
+      setEvidenceSubmitting(false);
+    }
+  };
+
   /* ─── Filtering + Sorting ─── */
   const filteredRequests = allRequests
     .filter(r => {
@@ -439,7 +471,7 @@ export const OfficerDashboard = () => {
                 </div>
               </div>
 
-              {/* Evidence Review Panel — T8 */}
+              {/* Evidence Review Panel — with officer override actions */}
               {selectedRequest.documents && selectedRequest.documents.length > 0 && (
                 <div className="gov-card p-5 space-y-3">
                   <h4 className="font-black text-sm text-gray-900 flex items-center gap-2" style={{ fontFamily: 'Outfit, sans-serif' }}>
@@ -447,16 +479,16 @@ export const OfficerDashboard = () => {
                     Evidence Review
                     {selectedRequest.documents.some(d => d.flagged) && (
                       <span className="status-badge badge-critical flex items-center gap-1 ml-auto">
-                        <AlertTriangle className="w-3 h-3" /> Suspicious
+                        <AlertTriangle className="w-3 h-3" /> Attention
                       </span>
                     )}
                   </h4>
 
-                  <div className="space-y-2">
+                  <div className="space-y-3">
                     {selectedRequest.documents.map((doc, i) => (
                       <div
                         key={i}
-                        className={`p-3 rounded-xl border text-xs ${
+                        className={`p-3.5 rounded-xl border text-xs space-y-2 ${
                           doc.flagged
                             ? 'bg-amber-50 border-amber-200'
                             : doc.verified
@@ -464,6 +496,7 @@ export const OfficerDashboard = () => {
                             : 'bg-gray-50 border-gray-200'
                         }`}
                       >
+                        {/* Row 1: filename + status */}
                         <div className="flex items-start justify-between gap-2">
                           <div className="flex items-center gap-1.5 font-semibold text-gray-800 truncate">
                             <Hash className="w-3 h-3 text-gray-400 flex-shrink-0" />
@@ -472,18 +505,20 @@ export const OfficerDashboard = () => {
                           <div className="flex items-center gap-1.5 flex-shrink-0">
                             {doc.flagged ? (
                               <span className="flex items-center gap-1 font-bold text-amber-700">
-                                <AlertTriangle className="w-3 h-3" /> Suspicious
+                                <AlertTriangle className="w-3 h-3" /> {doc.reason?.includes('Re-upload') ? 'Re-upload Req.' : doc.reason?.includes('Rejected') ? 'Rejected' : 'Suspicious'}
                               </span>
                             ) : doc.verified ? (
                               <span className="flex items-center gap-1 font-bold text-green-700">
-                                <ShieldCheck className="w-3 h-3" /> Verified
+                                <ShieldCheck className="w-3 h-3" /> {doc.reason?.includes('Approved by Officer') ? 'Officer Approved' : 'AI Verified'}
                               </span>
                             ) : (
                               <span className="text-gray-400 font-medium">Unverified</span>
                             )}
                           </div>
                         </div>
-                        <div className="mt-1.5 flex items-center justify-between">
+
+                        {/* Row 2: confidence + reason */}
+                        <div className="flex items-center justify-between">
                           <span className="text-gray-500">
                             Confidence:{' '}
                             <span className={`font-bold ${
@@ -496,6 +531,45 @@ export const OfficerDashboard = () => {
                           {doc.reason && (
                             <span className="text-gray-400 italic truncate max-w-[140px]">{doc.reason}</span>
                           )}
+                        </div>
+
+                        {/* Row 3: officer review audit */}
+                        {doc.reviewedAt && (
+                          <div className="text-[10px] text-blue-600 font-medium flex items-center gap-1 pt-1 border-t border-gray-200/50">
+                            <ShieldCheck className="w-3 h-3" />
+                            Officer reviewed: {new Date(doc.reviewedAt).toLocaleString('en-IN')}
+                          </div>
+                        )}
+
+                        {/* Row 4: action buttons */}
+                        <div className="flex gap-1.5 pt-1">
+                          <button
+                            onClick={() => handleEvidenceAction(i, 'approve')}
+                            disabled={evidenceSubmitting || (doc.verified && !doc.flagged)}
+                            className="flex-1 py-1.5 rounded-lg text-[10px] font-bold border transition
+                              bg-green-50 border-green-200 text-green-700 hover:bg-green-100
+                              disabled:opacity-40 disabled:cursor-not-allowed"
+                          >
+                            ✓ Approve
+                          </button>
+                          <button
+                            onClick={() => handleEvidenceAction(i, 'reject')}
+                            disabled={evidenceSubmitting || (doc.flagged && doc.reason?.includes('Rejected'))}
+                            className="flex-1 py-1.5 rounded-lg text-[10px] font-bold border transition
+                              bg-red-50 border-red-200 text-red-700 hover:bg-red-100
+                              disabled:opacity-40 disabled:cursor-not-allowed"
+                          >
+                            ✕ Reject
+                          </button>
+                          <button
+                            onClick={() => handleEvidenceAction(i, 'request-reupload')}
+                            disabled={evidenceSubmitting || doc.reason?.includes('Re-upload')}
+                            className="flex-1 py-1.5 rounded-lg text-[10px] font-bold border transition
+                              bg-blue-50 border-blue-200 text-blue-700 hover:bg-blue-100
+                              disabled:opacity-40 disabled:cursor-not-allowed"
+                          >
+                            ↻ Re-upload
+                          </button>
                         </div>
                       </div>
                     ))}

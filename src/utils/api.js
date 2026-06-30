@@ -93,6 +93,16 @@ export const requestAPI = {
       `/requests/${requestId}/action`,
       payload
     );
+  },
+
+  // Officer manual evidence override (approve / reject / request-reupload)
+  evidenceAction: async (requestId, payload) => {
+    return await API.put(`/requests/${requestId}/evidence-action`, payload);
+  },
+
+  // Citizen re-upload for flagged / requested document
+  reuploadeEvidence: async (requestId, payload) => {
+    return await API.put(`/requests/${requestId}/reupload`, payload);
   }
 };
 

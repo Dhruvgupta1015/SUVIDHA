@@ -54,12 +54,14 @@ const requestSchema = new mongoose.Schema({
   },
   documents: [
     {
-      name:       { type: String, required: true },
-      path:       { type: String, required: true },
-      verified:   { type: Boolean, default: false },
-      confidence: { type: Number, default: 1.0 },
-      flagged:    { type: Boolean, default: false },  // true if confidence < 0.50 (suspicious)
-      reason:     { type: String,  default: '' }       // scoring rationale for officer review
+      name:        { type: String, required: true },
+      path:        { type: String, required: true },
+      verified:    { type: Boolean, default: false },
+      confidence:  { type: Number,  default: 1.0 },
+      flagged:     { type: Boolean, default: false },   // true if confidence < 0.50 (suspicious)
+      reason:      { type: String,  default: '' },       // AI scoring rationale
+      reviewedBy:  { type: mongoose.Schema.Types.ObjectId, ref: 'User', default: null }, // officer who reviewed
+      reviewedAt:  { type: Date,    default: null }      // when officer reviewed
     }
   ]
 }, {

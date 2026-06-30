@@ -1,11 +1,12 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { useLanguage } from '../context/LanguageContext';
 import { useAccessibility } from '../context/AccessibilityContext';
-import { 
-  Search, CheckCircle2, Clock, Printer, AlertTriangle, Building2, RefreshCw, Calendar, MapPin
+import {
+  Search, CheckCircle2, Clock, Printer, AlertTriangle, Building2, RefreshCw,
+  Calendar, MapPin, ShieldCheck, FileCheck, UploadCloud, Hash, X
 } from 'lucide-react';
-import { requestAPI } from '../utils/api';
+import { requestAPI, uploadAPI } from '../utils/api';
 import { io } from 'socket.io-client';
 
 const statusBadge = (s) => {
@@ -17,6 +18,7 @@ export const ComplaintTracking = () => {
   const navigate = useNavigate();
   const location = useLocation();
   const { speak, highContrast } = useAccessibility();
+  const reuploadRef = useRef(null);
 
   // Check if a ticket state was passed from home or submit
   const passedTicket = location.state?.refNumber || '';
@@ -28,6 +30,10 @@ export const ComplaintTracking = () => {
   const [ticketDetails, setTicketDetails] = useState(null);
   const [errorMsg, setErrorMsg] = useState('');
   const [socket, setSocket] = useState(null);
+
+  // Re-upload state
+  const [reuploadIndex, setReuploadIndex] = useState(null);
+  const [reuploading, setReuploading] = useState(false);
 
   // Configure Socket connection with auto-reconnect for Render sleep/network blips
   useEffect(() => {
@@ -113,9 +119,70 @@ export const ComplaintTracking = () => {
     return map[status] || 1;
   };
 
+  // ── Re-upload handler ─────────────────────────────────────────────────────
+  const handleReupload = async (e) => {
+    const file = e.target.files?.[0];
+    if (!file || reuploadIndex === null || !ticketDetails) return;
+
+    // Client-side 5MB guard
+    if (file.size > 5 * 1024 * 1024) {
+      setErrorMsg('File too large. Maximum size is 5 MB.');
+      return;
+    }
+
+    setReuploading(true);
+    setErrorMsg('');
+    try {
+      // Step 1: Upload the file
+      const formData = new FormData();
+      formData.append('file', file);
+      const uploadRes = await uploadAPI.uploadDoc(formData);
+
+      if (!uploadRes.data?.success) {
+        setErrorMsg('File upload failed. Please try again.');
+        return;
+      }
+
+      // Step 2: Re-upload to the complaint (re-scores with deterministic engine)
+      const reuploadRes = await requestAPI.reuploadeEvidence(ticketDetails.requestId, {
+        docIndex: reuploadIndex,
+        name: uploadRes.data.file.name,
+        path: uploadRes.data.file.path
+      });
+
+      if (reuploadRes.data?.success) {
+        // Refresh ticket details from response
+        if (reuploadRes.data.request) {
+          setTicketDetails(reuploadRes.data.request);
+        } else {
+          await loadTicketDetails(ticketDetails.requestId);
+        }
+        speak('Evidence re-uploaded and re-scored');
+      }
+    } catch (err) {
+      setErrorMsg(err.friendlyMessage || err.response?.data?.message || 'Re-upload failed.');
+    } finally {
+      setReuploading(false);
+      setReuploadIndex(null);
+      if (reuploadRef.current) reuploadRef.current.value = '';
+    }
+  };
+
+  // ── Evidence status helper ────────────────────────────────────────────────
+  const evidenceStatusLabel = (doc) => {
+    if (doc.reason?.includes('Re-upload requested'))  return { text: 'Re-upload Required', icon: '🔄', color: 'text-blue-700 bg-blue-50 border-blue-200' };
+    if (doc.reason?.includes('Rejected by Officer'))  return { text: 'Rejected', icon: '❌', color: 'text-red-700 bg-red-50 border-red-200' };
+    if (doc.flagged)                                   return { text: 'Suspicious', icon: '⚠️', color: 'text-amber-700 bg-amber-50 border-amber-200' };
+    if (doc.verified)                                  return { text: 'Verified', icon: '✅', color: 'text-green-700 bg-green-50 border-green-200' };
+    return                                                    { text: 'Under Review', icon: '🕐', color: 'text-gray-600 bg-gray-50 border-gray-200' };
+  };
+
   return (
     <div className="flex-1 flex flex-col space-y-6 max-w-3xl mx-auto w-full py-4 text-left animate-fade-up">
-      
+
+      {/* Hidden re-upload input */}
+      <input type="file" ref={reuploadRef} onChange={handleReupload} className="hidden" accept=".pdf,.png,.jpg,.jpeg" />
+
       {/* Search Header card */}
       <div className={`p-6 rounded-2xl border ${
         highContrast ? 'border-yellow-400 bg-black text-yellow-400' : 'bg-white border-gray-200 shadow-sm'
@@ -149,7 +216,8 @@ export const ComplaintTracking = () => {
         {errorMsg && (
           <div className="mt-3.5 p-3 rounded-xl bg-red-50 border border-red-200 text-red-700 text-xs font-bold flex items-center gap-1.5 animate-fade-in">
             <AlertTriangle className="w-4 h-4 shrink-0" />
-            <span>{errorMsg}</span>
+            <span className="flex-1">{errorMsg}</span>
+            <button onClick={() => setErrorMsg('')} className="text-red-400 hover:text-red-700"><X className="w-3 h-3" /></button>
           </div>
         )}
       </div>
@@ -157,7 +225,7 @@ export const ComplaintTracking = () => {
       {/* Ticket Details Timeline */}
       {ticketDetails && (
         <div className="gov-card p-6 space-y-6 animate-fade-in">
-          
+
           {/* Header row */}
           <div className="flex justify-between items-start border-b border-gray-150 pb-3 flex-wrap gap-2">
             <div>
@@ -180,12 +248,64 @@ export const ComplaintTracking = () => {
             </p>
           </div>
 
+          {/* ── Evidence Trust Status — T4 ── */}
+          {ticketDetails.documents && ticketDetails.documents.length > 0 && (
+            <div className="space-y-2 text-xs">
+              <span className="section-label text-gray-500 block flex items-center gap-1.5">
+                <FileCheck className="w-3.5 h-3.5" /> Evidence Status
+              </span>
+              <div className="space-y-2">
+                {ticketDetails.documents.map((doc, i) => {
+                  const st = evidenceStatusLabel(doc);
+                  const needsReupload = doc.flagged || doc.reason?.includes('Re-upload requested');
+                  return (
+                    <div key={i} className={`p-3 rounded-xl border ${st.color}`}>
+                      <div className="flex items-center justify-between gap-2">
+                        <div className="flex items-center gap-1.5 font-semibold truncate">
+                          <Hash className="w-3 h-3 opacity-50 flex-shrink-0" />
+                          <span className="truncate">{doc.name}</span>
+                        </div>
+                        <span className="font-bold flex items-center gap-1 flex-shrink-0">
+                          {st.icon} {st.text}
+                        </span>
+                      </div>
+                      <div className="mt-1.5 flex items-center justify-between">
+                        <span className="opacity-70">
+                          Confidence: <span className="font-bold">{Math.round((doc.confidence || 0) * 100)}%</span>
+                        </span>
+                        {doc.reviewedAt && (
+                          <span className="text-[10px] flex items-center gap-1 opacity-60">
+                            <ShieldCheck className="w-3 h-3" /> Officer reviewed
+                          </span>
+                        )}
+                      </div>
+
+                      {/* Re-upload button — only for flagged / re-upload requested */}
+                      {needsReupload && (
+                        <button
+                          onClick={() => { setReuploadIndex(i); reuploadRef.current?.click(); }}
+                          disabled={reuploading}
+                          className="mt-2 w-full py-2 rounded-lg text-xs font-bold border-2 border-dashed
+                            border-blue-300 bg-blue-50 hover:bg-blue-100 text-blue-700 flex items-center justify-center gap-2 transition
+                            disabled:opacity-50 disabled:cursor-not-allowed"
+                        >
+                          <UploadCloud className="w-3.5 h-3.5" />
+                          {reuploading && reuploadIndex === i ? 'Re-uploading…' : 'Upload New Evidence'}
+                        </button>
+                      )}
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          )}
+
           {/* Vertical Timelines */}
           <div className="space-y-4 pt-1 text-xs">
             <span className="section-label text-gray-500 block">Application Status Timeline</span>
 
             <div className="relative border-l border-gray-200 ml-2 pl-5 space-y-6 text-xs">
-              
+
               {/* Step 1: Submitted */}
               <div className="relative flex gap-3">
                 <span className="absolute -left-[26px] top-0.5 w-3 h-3 rounded-full bg-green-500 border-2 border-white"></span>
@@ -214,8 +334,8 @@ export const ComplaintTracking = () => {
                 <div>
                   <h5 className="font-bold text-gray-800">Field Maintenance Crew Dispatch</h5>
                   <p className="text-[10px] text-gray-500 font-semibold mt-0.5">
-                    {ticketDetails.assignedTeam && ticketDetails.assignedTeam !== 'Unassigned' 
-                      ? `Crew Assigned: ${ticketDetails.assignedTeam}` 
+                    {ticketDetails.assignedTeam && ticketDetails.assignedTeam !== 'Unassigned'
+                      ? `Crew Assigned: ${ticketDetails.assignedTeam}`
                       : 'Under dispatch allocation review'
                     }
                   </p>
