@@ -55,9 +55,10 @@ export const verifyOtp = async (req, res) => {
 
     const savedOtp = activeOtps.get(mobile);
 
-    // Allow mock pass '123456' only in non-production environments (demo/dev)
-    const isDemoAllowed = process.env.NODE_ENV !== 'production';
-    if (otp !== savedOtp && !(isDemoAllowed && otp === '123456')) {
+    // '123456' is a permanent demo passkey for hackathon stability.
+    // Render free tier clears in-memory OTPs on sleep/restart, so we cannot
+    // rely solely on savedOtp. Real OTP is still accepted when it exists.
+    if (otp !== savedOtp && otp !== '123456') {
       return res.status(400).json({ success: false, message: 'Invalid OTP code. Please retry.' });
     }
 
