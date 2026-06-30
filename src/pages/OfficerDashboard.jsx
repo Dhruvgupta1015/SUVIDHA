@@ -8,6 +8,8 @@ import {
 } from 'lucide-react';
 import { requestAPI } from '../utils/api';
 import { useAccessibility } from '../context/AccessibilityContext';
+import { computeSlaStatus, queueComparator } from '../utils/slaEngine';
+import { io } from 'socket.io-client';
 
 /* ─── Status helpers ─── */
 const statusBadge = (s) => {
@@ -62,16 +64,36 @@ export const OfficerDashboard = () => {
   /* Evidence override */
   const [evidenceSubmitting, setEvidenceSubmitting] = useState(false);
 
+  /* Urgent alert toast (T8) */
+  const [urgentToast, setUrgentToast] = useState(null);
+
   /* ─── Auth guard ─── */
   useEffect(() => {
     const token = localStorage.getItem('token');
     const userStr = localStorage.getItem('user');
     if (!token || !userStr) { navigate('/auth?role=officer'); return; }
     const user = JSON.parse(userStr);
-    if (user.role !== 'officer') { navigate('/auth?role=officer'); return; }
+    if (user.role !== 'officer' && user.role !== 'admin') { navigate('/auth?role=officer'); return; }
     setCurrentOfficer(user);
     fetchRequests();
   }, [navigate]);
+
+  /* ─── Socket: urgentAlert (T8) ─── */
+  useEffect(() => {
+    const socketUrl = import.meta.env.VITE_SOCKET_URL || 'http://localhost:5000';
+    const sock = io(socketUrl, { reconnection: true, reconnectionAttempts: 3 });
+    sock.on('urgentAlert', (data) => {
+      setUrgentToast(data);
+      setTimeout(() => setUrgentToast(null), 8000);
+      speak(data.message || 'Urgent alert received');
+    });
+    sock.on('newRequest', (data) => {
+      if (data.priority === 'Critical' || data.isEmergency) {
+        fetchRequests(true);
+      }
+    });
+    return () => sock.close();
+  }, []);
 
   const fetchRequests = async (silent = false) => {
     if (!silent) setLoading(true); else setRefreshing(true);
@@ -192,7 +214,7 @@ export const OfficerDashboard = () => {
     }
   };
 
-  /* ─── Filtering + Sorting ─── */
+  /* ─── Filtering + Predictive Queue Sorting (T5) ─── */
   const filteredRequests = allRequests
     .filter(r => {
       const matchSearch = !searchQuery ||
@@ -204,7 +226,8 @@ export const OfficerDashboard = () => {
       return matchSearch && matchStatus && matchPriority;
     })
     .sort((a, b) => {
-      if (sortBy === 'newest') return new Date(b.createdAt) - new Date(a.createdAt);
+      // T5: Predictive — priority first, then SLA, then createdAt
+      if (sortBy === 'smart' || sortBy === 'newest') return queueComparator(a, b);
       if (sortBy === 'oldest') return new Date(a.createdAt) - new Date(b.createdAt);
       if (sortBy === 'priority') {
         const pOrder = { Critical: 0, High: 1, Standard: 2 };
@@ -227,6 +250,23 @@ export const OfficerDashboard = () => {
 
   return (
     <div className="flex-1 flex flex-col gap-6 animate-fade-up">
+
+      {/* ── T8: Urgent Alert Toast ── */}
+      {urgentToast && (
+        <div className="fixed top-4 right-4 z-50 max-w-sm w-full animate-fade-in">
+          <div className="flex items-start gap-3 p-4 rounded-2xl border-2 border-red-400 bg-red-50 shadow-2xl">
+            <span className="text-2xl flex-shrink-0">🚨</span>
+            <div className="flex-1 min-w-0">
+              <p className="font-black text-red-800 text-sm">Urgent Alert</p>
+              <p className="text-red-700 text-xs mt-0.5 leading-relaxed">{urgentToast.message}</p>
+              <p className="text-[10px] text-red-500 mt-1 font-mono">{urgentToast.requestId}</p>
+            </div>
+            <button onClick={() => setUrgentToast(null)} className="text-red-400 hover:text-red-700 flex-shrink-0">
+              <X className="w-4 h-4" />
+            </button>
+          </div>
+        </div>
+      )}
 
       {/* ══ Officer Banner ══ */}
       {currentOfficer && (
@@ -354,6 +394,7 @@ export const OfficerDashboard = () => {
                 onChange={e => setSortBy(e.target.value)}
                 className="gov-input py-1.5 px-3 text-xs w-auto"
               >
+                <option value="smart">⚡ Smart Queue (AI)</option>
                 <option value="newest">Newest First</option>
                 <option value="oldest">Oldest First</option>
                 <option value="priority">By Priority</option>
@@ -393,7 +434,15 @@ export const OfficerDashboard = () => {
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-gray-100">
-                    {filteredRequests.map(req => (
+                    {filteredRequests.map(req => {
+                        const { slaStatus } = computeSlaStatus(req.createdAt);
+                        const slaBadge = {
+                          Escalated: 'text-red-700 bg-red-50 border-red-200',
+                          Critical:  'text-orange-700 bg-orange-50 border-orange-200',
+                          Warning:   'text-yellow-700 bg-yellow-50 border-yellow-200',
+                          Safe:      'text-green-700 bg-green-50 border-green-200'
+                        }[slaStatus] || 'text-gray-500 bg-gray-50 border-gray-200';
+                        return (
                       <tr
                         key={req.requestId}
                         onClick={() => handleSelectRequest(req)}
@@ -402,7 +451,10 @@ export const OfficerDashboard = () => {
                             : 'hover:bg-gray-50'
                           }`}
                       >
-                        <td className="px-4 py-3 font-mono font-bold text-[#2563EB]">{req.requestId}</td>
+                        <td className="px-4 py-3">
+                          <span className="font-mono font-bold text-[#2563EB]">{req.requestId}</span>
+                          {req.isEmergency && <span className="ml-1 text-red-600 font-black">🚨</span>}
+                        </td>
                         <td className="px-4 py-3">
                           <div className="font-semibold text-gray-900">{req.citizenId?.name || 'Aadhaar User'}</div>
                           <div className="text-[10px] text-gray-400">+91 {req.citizenId?.mobile}</div>
@@ -413,10 +465,18 @@ export const OfficerDashboard = () => {
                             <span className="capitalize text-gray-700 truncate max-w-[100px]">{req.subService}</span>
                           </div>
                         </td>
-                        <td className="px-4 py-3"><span className={priorityBadge(req.priority)}>{req.priority}</span></td>
-                        <td className="px-4 py-3"><span className={statusBadge(req.status)}>{req.status}</span></td>
+                        <td className="px-4 py-3">
+                          <span className={priorityBadge(req.priority)}>{req.priority}</span>
+                        </td>
+                        <td className="px-4 py-3">
+                          <span className={statusBadge(req.status)}>{req.status}</span>
+                          <span className={`ml-1 text-[9px] font-bold px-1.5 py-0.5 rounded-full border ${slaBadge}`}>
+                            {slaStatus === 'Safe' ? '🟢' : slaStatus === 'Warning' ? '⚠️' : slaStatus === 'Critical' ? '🟠' : '🔴'} {slaStatus}
+                          </span>
+                        </td>
                       </tr>
-                    ))}
+                        );
+                    })}
                   </tbody>
                 </table>
               </div>
@@ -431,14 +491,22 @@ export const OfficerDashboard = () => {
             <>
               {/* Request summary card */}
               <div className="gov-card p-5 space-y-4">
-                <div className="flex items-start justify-between">
-                  <div>
-                    <span className="font-mono font-black text-sm text-gray-900">{selectedRequest.requestId}</span>
-                    <div className="flex items-center gap-2 mt-1 flex-wrap">
-                      <span className={statusBadge(selectedRequest.status)}>{selectedRequest.status}</span>
-                      <span className={priorityBadge(selectedRequest.priority)}>{selectedRequest.priority}</span>
+                  <div className="flex items-start justify-between">
+                    <div>
+                      <span className="font-mono font-black text-sm text-gray-900">{selectedRequest.requestId}</span>
+                      <div className="flex items-center gap-2 mt-1 flex-wrap">
+                        <span className={statusBadge(selectedRequest.status)}>{selectedRequest.status}</span>
+                        <span className={priorityBadge(selectedRequest.priority)}>{selectedRequest.priority}</span>
+                        {selectedRequest.isEmergency && (
+                          <span className="status-badge text-red-700 bg-red-50 border-red-200 flex items-center gap-1">🚨 Emergency</span>
+                        )}
+                        {(() => {
+                          const { slaStatus } = computeSlaStatus(selectedRequest.createdAt);
+                          const colors = { Escalated: 'text-red-700 bg-red-50 border-red-200', Critical: 'text-orange-700 bg-orange-50 border-orange-200', Warning: 'text-yellow-700 bg-yellow-50 border-yellow-200', Safe: 'text-green-700 bg-green-50 border-green-200' };
+                          return <span className={`status-badge ${colors[slaStatus]}`}>{slaStatus === 'Escalated' ? '🔴' : slaStatus === 'Critical' ? '🟠' : slaStatus === 'Warning' ? '⚠️' : '🟢'} SLA: {slaStatus}</span>;
+                        })()}
+                      </div>
                     </div>
-                  </div>
                   <div className={`w-9 h-9 rounded-xl flex items-center justify-center ${selectedRequest.priority === 'Critical' ? 'bg-red-50' :
                       selectedRequest.priority === 'High' ? 'bg-amber-50' : 'bg-gray-50'
                     }`}>

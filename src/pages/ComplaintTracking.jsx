@@ -4,10 +4,11 @@ import { useLanguage } from '../context/LanguageContext';
 import { useAccessibility } from '../context/AccessibilityContext';
 import {
   Search, CheckCircle2, Clock, Printer, AlertTriangle, Building2, RefreshCw,
-  Calendar, MapPin, ShieldCheck, FileCheck, UploadCloud, Hash, X
+  Calendar, MapPin, ShieldCheck, FileCheck, UploadCloud, Hash, X, Zap
 } from 'lucide-react';
 import { requestAPI, uploadAPI } from '../utils/api';
 import { io } from 'socket.io-client';
+import { computeSlaStatus } from '../utils/slaEngine';
 
 const statusBadge = (s) => {
   const m = { Completed: 'badge-complete', 'In-Progress': 'badge-progress', Rejected: 'badge-rejected', Pending: 'badge-pending', Approved: 'badge-approved' };
@@ -226,19 +227,64 @@ export const ComplaintTracking = () => {
       {ticketDetails && (
         <div className="gov-card p-6 space-y-6 animate-fade-in">
 
-          {/* Header row */}
+          {/* Header row — T7: Emergency + SLA badges */}
           <div className="flex justify-between items-start border-b border-gray-150 pb-3 flex-wrap gap-2">
             <div>
               <div className="flex items-center gap-2 flex-wrap">
                 <span className="font-extrabold text-sm text-gray-900 font-mono">{ticketDetails.requestId}</span>
                 <span className={statusBadge(ticketDetails.status)}>{ticketDetails.status}</span>
+                {/* T7: Priority badge */}
+                {ticketDetails.priority === 'Critical' && (
+                  <span className="status-badge text-red-700 bg-red-50 border-red-200">⚡ Critical</span>
+                )}
+                {ticketDetails.priority === 'High' && (
+                  <span className="status-badge text-orange-700 bg-orange-50 border-orange-200">⚠️ High</span>
+                )}
+                {/* T7: Emergency badge */}
+                {ticketDetails.isEmergency && (
+                  <span className="status-badge text-red-700 bg-red-50 border-red-300 font-black">🚨 Emergency</span>
+                )}
+                {/* T4: SLA status badge */}
+                {(() => {
+                  const { slaStatus, ageHours } = computeSlaStatus(ticketDetails.createdAt);
+                  const colors = {
+                    Escalated: 'text-red-700 bg-red-50 border-red-200',
+                    Critical:  'text-orange-700 bg-orange-50 border-orange-200',
+                    Warning:   'text-yellow-700 bg-yellow-50 border-yellow-200',
+                    Safe:      'text-green-700 bg-green-50 border-green-200'
+                  };
+                  const icons = { Escalated: '🔴', Critical: '🟠', Warning: '⚠️', Safe: '🟢' };
+                  if (slaStatus === 'Safe') return null; // don't clutter safe tickets
+                  return (
+                    <span className={`status-badge ${colors[slaStatus]}`}>
+                      {icons[slaStatus]} SLA: {slaStatus} ({ageHours}h)
+                    </span>
+                  );
+                })()}
               </div>
               <p className="text-[10px] text-gray-400 mt-1 capitalize font-medium">Category: <span className="font-bold text-gray-700">{ticketDetails.serviceType} ({ticketDetails.subService})</span></p>
+              {/* AI routing info */}
+              {ticketDetails.routingReason && (
+                <p className="text-[10px] text-blue-600 mt-0.5 flex items-center gap-1">
+                  <Zap className="w-3 h-3" />{ticketDetails.routingReason}
+                </p>
+              )}
             </div>
             <div className="text-right text-[10px] text-gray-400 font-mono">
               Filed: {new Date(ticketDetails.createdAt).toLocaleDateString('en-IN')}
             </div>
           </div>
+
+          {/* AI Priority reason — visible to citizen for transparency */}
+          {ticketDetails.priorityReason && ticketDetails.priorityReason !== 'No urgency keywords detected — routine complaint' && (
+            <div className="flex items-start gap-2 p-3 rounded-xl bg-amber-50 border border-amber-200 text-xs text-amber-800">
+              <span className="text-base flex-shrink-0">⚡</span>
+              <div>
+                <span className="font-bold block">AI Priority Detection</span>
+                <span className="opacity-80">{ticketDetails.priorityReason}</span>
+              </div>
+            </div>
+          )}
 
           {/* Description details */}
           <div className="space-y-1.5 text-xs">

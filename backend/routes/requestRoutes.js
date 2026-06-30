@@ -1,6 +1,7 @@
 import express from 'express';
 import {
   createRequest,
+  createEmergencyRequest,
   getRequestById,
   getCitizenRequests,
   getDepartmentRequests,
@@ -13,6 +14,7 @@ import { protect, authorize } from '../middleware/auth.js';
 const router = express.Router();
 
 router.post('/create',                protect,                             createRequest);
+router.post('/emergency',             protect,                             createEmergencyRequest);
 router.get('/my-requests',            protect,                             getCitizenRequests);
 router.get('/department',             protect, authorize('officer', 'admin'), getDepartmentRequests);
 router.get('/:id',                                                         getRequestById);

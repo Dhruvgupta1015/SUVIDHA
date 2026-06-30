@@ -2,6 +2,8 @@ import mongoose from 'mongoose';
 import Request from '../models/Request.js';
 import User from '../models/User.js';
 import { validateAndScoreDocuments, rescoreDocument } from '../utils/evidenceValidator.js';
+import { detectPriority } from '../utils/priorityEngine.js';
+import { routeComplaint } from '../utils/routingEngine.js';
 
 /**
  * @desc    Create new civic request or complaint
@@ -10,12 +12,11 @@ import { validateAndScoreDocuments, rescoreDocument } from '../utils/evidenceVal
  */
 export const createRequest = async (req, res) => {
   try {
-    const { serviceType, subService, description, documents, priority } = req.body;
+    const { serviceType, subService, description, documents } = req.body;
     const citizenId = req.user.id; // from protect middleware
 
-    // ── Input validation ──────────────────────────────────────────────────────
+    // ── Input validation ─────────────────────────────────────────────────
     const validServiceTypes = ['electricity', 'water', 'gas', 'waste', 'general'];
-    const validPriorities   = ['Standard', 'High', 'Critical'];
 
     if (!serviceType || !validServiceTypes.includes(serviceType)) {
       return res.status(400).json({ success: false, message: 'Invalid or missing serviceType. Must be one of: electricity, water, gas, waste, general.' });
@@ -26,11 +27,8 @@ export const createRequest = async (req, res) => {
     if (!description || typeof description !== 'string' || description.trim().length < 10) {
       return res.status(400).json({ success: false, message: 'Description must be at least 10 characters.' });
     }
-    if (priority && !validPriorities.includes(priority)) {
-      return res.status(400).json({ success: false, message: 'Invalid priority level. Must be: Standard, High, or Critical.' });
-    }
 
-    // ── T6: Duplicate complaint detection (same citizen, 24h window) ──────────
+    // ── T6: Duplicate complaint detection (same citizen, 24h window) ─────────
     const oneDayAgo = new Date(Date.now() - 24 * 60 * 60 * 1000);
     const duplicate = await Request.findOne({
       citizenId,
@@ -47,7 +45,7 @@ export const createRequest = async (req, res) => {
       });
     }
 
-    // ── T1 / T2 / T3 / T4: Evidence validation + confidence scoring ───────────
+    // ── T1/T2/T3/T4: Evidence validation + confidence scoring ───────────
     const { valid, message, scoredDocs } = validateAndScoreDocuments(
       documents || [],
       serviceType,
@@ -58,44 +56,135 @@ export const createRequest = async (req, res) => {
       return res.status(400).json({ success: false, message });
     }
 
-    // ── Map serviceType to department ─────────────────────────────────────────
-    let assignedDepartment = 'General Administration';
-    if (serviceType === 'electricity') assignedDepartment = 'Electricity Department';
-    else if (serviceType === 'water')  assignedDepartment = 'Water Department';
-    else if (serviceType === 'gas')    assignedDepartment = 'Gas Department';
-    else if (serviceType === 'waste')  assignedDepartment = 'Waste Management';
+    // ── Cat3 T1: AI Priority Engine (overrides manual selection) ──────────
+    const { priority, priorityReason, isEmergency } = detectPriority(description, subService);
+
+    // ── Cat3 T3: Smart Department Routing Engine ──────────────────────
+    const { department: assignedDepartment, routingReason } = routeComplaint(serviceType, subService, description);
 
     const request = await Request.create({
       citizenId,
       serviceType,
       subService,
       description,
-      priority: priority || 'Standard',
+      priority,           // AI-detected, not manual
+      priorityReason,
+      isEmergency,
       assignedDepartment,
-      documents: scoredDocs  // already scored + flagged by evidenceValidator
+      routingReason,
+      documents: scoredDocs
     });
 
     const populatedRequest = await Request.findById(request._id).populate('citizenId', 'name mobile');
 
-    // Emit Socket update for dashboards
+    // ── Socket: emit newRequest + urgentAlert for Critical/Emergency ──────
     const io = req.app.get('io');
     if (io) {
       io.emit('newRequest', {
-        id: request.requestId,
+        id:          request.requestId,
         citizenName: populatedRequest.citizenId.name,
-        service: serviceType,
+        service:     serviceType,
         subService,
-        status: request.status,
-        priority: request.priority,
-        time: "Just now"
+        status:      request.status,
+        priority:    request.priority,
+        isEmergency: request.isEmergency,
+        time:        'Just now'
       });
+
+      // Cat3 T8: Real-time urgency alert for officer/admin dashboards
+      if (priority === 'Critical' || isEmergency) {
+        io.emit('urgentAlert', {
+          requestId:   request.requestId,
+          priority:    request.priority,
+          isEmergency: request.isEmergency,
+          service:     serviceType,
+          message:     `${isEmergency ? '🚨 Emergency' : '⚡ Critical'} complaint received: ${subService} (${serviceType})`,
+          time:        new Date().toISOString()
+        });
+      }
     }
 
     return res.status(201).json({
       success: true,
       message: 'Civic request registered successfully',
-      requestId: request.requestId,
-      request: populatedRequest
+      requestId:     request.requestId,
+      priority,
+      priorityReason,
+      isEmergency,
+      request:       populatedRequest
+    });
+  } catch (error) {
+    return res.status(500).json({ success: false, message: error.message });
+  }
+};
+
+/**
+ * @desc    Emergency fast-lane complaint — bypasses normal queue
+ * @route   POST /api/requests/emergency
+ * @access  Private (Citizen)
+ */
+export const createEmergencyRequest = async (req, res) => {
+  try {
+    const { serviceType, subService, description, emergencyType } = req.body;
+    const citizenId = req.user.id;
+
+    const validServiceTypes = ['electricity', 'water', 'gas', 'waste', 'general'];
+    if (!serviceType || !validServiceTypes.includes(serviceType)) {
+      return res.status(400).json({ success: false, message: 'Invalid serviceType.' });
+    }
+    if (!description || description.trim().length < 5) {
+      return res.status(400).json({ success: false, message: 'Description is required.' });
+    }
+
+    // Smart routing
+    const { department: assignedDepartment, routingReason } = routeComplaint(serviceType, subService || emergencyType, description);
+
+    const request = await Request.create({
+      citizenId,
+      serviceType,
+      subService:         subService || emergencyType || 'Emergency Complaint',
+      description:        description.trim(),
+      priority:           'Critical',
+      priorityReason:     `Emergency fast-lane: ${emergencyType || 'Emergency reported by citizen'}`,
+      isEmergency:        true,
+      status:             'In-Progress',   // bypass Pending queue
+      assignedDepartment,
+      routingReason,
+      assignedTeam:       'Emergency Response Unit'
+    });
+
+    const populatedRequest = await Request.findById(request._id).populate('citizenId', 'name mobile');
+
+    // Socket — urgent broadcast to all connected officers/admins
+    const io = req.app.get('io');
+    if (io) {
+      io.emit('urgentAlert', {
+        requestId:   request.requestId,
+        priority:    'Critical',
+        isEmergency: true,
+        service:     serviceType,
+        message:     `🚨 EMERGENCY: ${emergencyType || subService} reported — ${assignedDepartment} alerted`,
+        time:        new Date().toISOString()
+      });
+      io.emit('newRequest', {
+        id:          request.requestId,
+        citizenName: populatedRequest.citizenId.name,
+        service:     serviceType,
+        subService:  request.subService,
+        status:      'In-Progress',
+        priority:    'Critical',
+        isEmergency: true,
+        time:        'Just now'
+      });
+    }
+
+    return res.status(201).json({
+      success:     true,
+      message:     'Emergency complaint registered. Emergency Response Unit has been alerted.',
+      requestId:   request.requestId,
+      priority:    'Critical',
+      isEmergency: true,
+      request:     populatedRequest
     });
   } catch (error) {
     return res.status(500).json({ success: false, message: error.message });

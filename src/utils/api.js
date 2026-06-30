@@ -76,6 +76,11 @@ export const requestAPI = {
     return await API.post('/requests/create', payload);
   },
 
+  // Emergency fast-lane — bypasses normal queue, auto-sets Critical + Emergency Response Unit
+  createEmergency: async (payload) => {
+    return await API.post('/requests/emergency', payload);
+  },
+
   getById: async (id) => {
     return await API.get(`/requests/${id}`);
   },

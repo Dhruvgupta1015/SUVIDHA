@@ -4,10 +4,11 @@ import {
   User, PlusCircle, FileText, FolderLock, TrendingUp, Download,
   UploadCloud, CheckCircle, Clock, AlertTriangle, Zap, Droplet,
   Flame, Trash2, ChevronRight, ShieldCheck, Printer, Bell,
-  Search, RefreshCw, FileCheck, MapPin, Calendar, Hash
+  Search, RefreshCw, FileCheck, MapPin, Calendar, Hash, Siren, X
 } from 'lucide-react';
 import { requestAPI, uploadAPI } from '../utils/api';
 import { useAccessibility } from '../context/AccessibilityContext';
+import { io } from 'socket.io-client';
 
 /* ─── Status helpers ─── */
 const statusBadge = (status) => {
@@ -59,10 +60,20 @@ export const CitizenDashboard = () => {
   const [serviceType, setServiceType]     = useState('electricity');
   const [subService, setSubService]       = useState('New Connection Meter');
   const [description, setDescription]    = useState('');
-  const [priority, setPriority]           = useState('Standard');
   const [uploadedFiles, setUploadedFiles] = useState([]);
   const [formSuccess, setFormSuccess]     = useState(false);
   const [submitting, setSubmitting]       = useState(false);
+
+  /* Emergency modal state */
+  const [showEmergency, setShowEmergency]         = useState(false);
+  const [emergencyType, setEmergencyType]         = useState('fire');
+  const [emergencyService, setEmergencyService]   = useState('general');
+  const [emergencyDesc, setEmergencyDesc]         = useState('');
+  const [emergencySubmitting, setEmergencySubmitting] = useState(false);
+  const [emergencySuccess, setEmergencySuccess]   = useState(null);
+
+  /* Urgent alert toast */
+  const [urgentToast, setUrgentToast]     = useState(null);
 
   /* Vault state */
   const [vaultDocs, setVaultDocs] = useState([
@@ -84,6 +95,17 @@ export const CitizenDashboard = () => {
     setCurrentUser(user);
     fetchMyRequests();
   }, [navigate]);
+
+  /* ─── Socket: listen for urgentAlert (T8) ─── */
+  useEffect(() => {
+    const socketUrl = import.meta.env.VITE_SOCKET_URL || 'http://localhost:5000';
+    const sock = io(socketUrl, { reconnection: true, reconnectionAttempts: 3 });
+    sock.on('urgentAlert', (data) => {
+      setUrgentToast(data);
+      setTimeout(() => setUrgentToast(null), 6000);
+    });
+    return () => sock.close();
+  }, []);
 
   const fetchMyRequests = async (silent = false) => {
     if (!silent) setLoading(true); else setRefreshing(true);
@@ -112,7 +134,7 @@ export const CitizenDashboard = () => {
 
     setSubmitting(true); setErrorMsg('');
     try {
-      const res = await requestAPI.create({ serviceType, subService, description, priority, documents: uploadedFiles });
+      const res = await requestAPI.create({ serviceType, subService, description, documents: uploadedFiles });
       if (res.data?.success) {
         setFormSuccess(true); speak('Request filed successfully');
         await fetchMyRequests(true);
@@ -120,13 +142,33 @@ export const CitizenDashboard = () => {
         setTimeout(() => { setFormSuccess(false); setActiveTab('timeline'); }, 1800);
       }
     } catch (err) {
-      // Use friendlyMessage for clean UX — do NOT create a mock ticket on validation failure
       setErrorMsg(err.friendlyMessage || err.response?.data?.message || 'Submission failed. Please try again.');
-      // Only refresh timeline if it was a server error (5xx), not a validation rejection
       if (!err.response || err.response.status >= 500) {
         await fetchMyRequests(true);
       }
     } finally { setSubmitting(false); }
+  };
+
+  /* ─── Emergency submit (T2) ─── */
+  const handleEmergencySubmit = async (e) => {
+    e.preventDefault();
+    if (!emergencyDesc.trim()) { setErrorMsg('Please describe the emergency.'); return; }
+    setEmergencySubmitting(true); setErrorMsg('');
+    try {
+      const res = await requestAPI.createEmergency({
+        serviceType:   emergencyService,
+        emergencyType,
+        description:   emergencyDesc
+      });
+      if (res.data?.success) {
+        setEmergencySuccess(res.data);
+        speak('Emergency reported. Response unit alerted.');
+        await fetchMyRequests(true);
+        setTimeout(() => { setEmergencySuccess(null); setShowEmergency(false); setEmergencyDesc(''); }, 4000);
+      }
+    } catch (err) {
+      setErrorMsg(err.response?.data?.message || err.friendlyMessage || 'Emergency submission failed.');
+    } finally { setEmergencySubmitting(false); }
   };
 
   /* ─── File upload ─── */
@@ -219,6 +261,99 @@ export const CitizenDashboard = () => {
   return (
     <div className="flex-1 flex flex-col gap-6 animate-fade-up">
 
+      {/* ── Urgent Alert Toast (T8) ── */}
+      {urgentToast && (
+        <div className="fixed top-4 right-4 z-50 max-w-sm w-full animate-fade-in">
+          <div className="flex items-start gap-3 p-4 rounded-2xl border-2 border-red-400 bg-red-50 shadow-2xl">
+            <span className="text-2xl flex-shrink-0">🚨</span>
+            <div className="flex-1 min-w-0">
+              <p className="font-black text-red-800 text-sm">Urgent Alert</p>
+              <p className="text-red-700 text-xs mt-0.5 leading-relaxed">{urgentToast.message}</p>
+            </div>
+            <button onClick={() => setUrgentToast(null)} className="text-red-400 hover:text-red-700 flex-shrink-0">
+              <X className="w-4 h-4" />
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* ── Emergency Modal (T2) ── */}
+      {showEmergency && (
+        <div className="fixed inset-0 bg-black/60 z-50 flex items-center justify-center p-4" onClick={() => !emergencySubmitting && setShowEmergency(false)}>
+          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md p-6 animate-fade-up border-2 border-red-300" onClick={e => e.stopPropagation()}>
+            <div className="flex items-center gap-3 mb-5 pb-4 border-b border-red-100">
+              <div className="w-10 h-10 rounded-xl bg-red-100 border border-red-200 flex items-center justify-center flex-shrink-0">
+                <span className="text-xl">🚨</span>
+              </div>
+              <div>
+                <h3 className="font-black text-red-700 text-base" style={{ fontFamily: 'Outfit, sans-serif' }}>Emergency Report</h3>
+                <p className="text-xs text-red-500 mt-0.5">Bypasses normal queue — Emergency Response Unit alerted immediately</p>
+              </div>
+              <button onClick={() => setShowEmergency(false)} className="ml-auto text-gray-400 hover:text-gray-700"><X className="w-5 h-5" /></button>
+            </div>
+
+            {emergencySuccess ? (
+              <div className="py-8 flex flex-col items-center justify-center text-center gap-3 animate-fade-in">
+                <span className="text-5xl">🚨</span>
+                <h4 className="font-black text-red-700 text-lg" style={{ fontFamily: 'Outfit, sans-serif' }}>Emergency Registered!</h4>
+                <p className="text-sm text-gray-600">Ticket <span className="font-mono font-bold text-red-600">{emergencySuccess.requestId}</span></p>
+                <p className="text-xs text-gray-500">Emergency Response Unit has been alerted. Status: In-Progress.</p>
+              </div>
+            ) : (
+              <form onSubmit={handleEmergencySubmit} className="space-y-4">
+                <div>
+                  <label className="section-label text-gray-600 block mb-2">Emergency Type</label>
+                  <div className="grid grid-cols-1 gap-2">
+                    {[
+                      { id: 'fire',         label: '🔥 Fire Emergency',          service: 'general' },
+                      { id: 'gas leak',     label: '💨 Gas Leak / Explosion Risk', service: 'gas' },
+                      { id: 'electrocution', label: '⚡ Electrocution / Live Wire', service: 'electricity' },
+                      { id: 'major flood',  label: '🌊 Major Flood / Overflow',  service: 'water' },
+                      { id: 'road accident', label: '🚗 Road Accident / Blockage', service: 'general' },
+                    ].map(em => (
+                      <button
+                        key={em.id}
+                        type="button"
+                        onClick={() => { setEmergencyType(em.id); setEmergencyService(em.service); }}
+                        className={`py-2.5 px-4 rounded-xl border-2 text-left text-sm font-bold transition ${
+                          emergencyType === em.id
+                            ? 'border-red-400 bg-red-50 text-red-700'
+                            : 'border-gray-200 bg-white hover:border-red-200 text-gray-700'
+                        }`}
+                      >
+                        {em.label}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+                <div>
+                  <label className="section-label text-gray-600 block mb-2">Describe the Emergency <span className="text-red-500">*</span></label>
+                  <textarea
+                    rows={3}
+                    placeholder="Describe exact location, nature of emergency, number of people affected…"
+                    value={emergencyDesc}
+                    onChange={e => setEmergencyDesc(e.target.value)}
+                    className="gov-input resize-none"
+                    required
+                  />
+                </div>
+                <button
+                  type="submit"
+                  disabled={emergencySubmitting}
+                  className="w-full py-3 rounded-xl font-black text-sm bg-red-600 hover:bg-red-700 text-white transition flex items-center justify-center gap-2 disabled:opacity-60"
+                >
+                  {emergencySubmitting ? (
+                    <><span className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" /> Alerting Response Unit…</>
+                  ) : (
+                    <>🚨 Report Emergency Now</>
+                  )}
+                </button>
+              </form>
+            )}
+          </div>
+        </div>
+      )}
+
       {/* ══ Welcome Banner ══ */}
       {currentUser && (
         <div className="hero-gradient rounded-2xl p-6 text-white flex flex-col sm:flex-row sm:items-center justify-between gap-4">
@@ -244,6 +379,14 @@ export const CitizenDashboard = () => {
               title="Refresh"
             >
               <RefreshCw className={`w-4 h-4 ${refreshing ? 'animate-spin' : ''}`} />
+            </button>
+            {/* T2: Emergency Fast Lane Button */}
+            <button
+              onClick={() => setShowEmergency(true)}
+              className="flex items-center gap-2 px-4 py-2.5 bg-red-600 hover:bg-red-700 text-white font-black text-sm rounded-xl transition shadow-lg animate-pulse"
+            >
+              <span className="text-base">🚨</span>
+              Emergency Report
             </button>
             <button
               onClick={() => setActiveTab('apply')}
@@ -528,32 +671,19 @@ export const CitizenDashboard = () => {
                   </div>
                 </div>
 
-                {/* Sub-service & Priority */}
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                  <div>
-                    <label className="section-label text-gray-600 block mb-2">Service Category</label>
-                    <select
-                      value={subService}
-                      onChange={e => setSubService(e.target.value)}
-                      className="gov-input"
-                    >
-                      {subServicesMap[serviceType].map((sub, i) => (
-                        <option key={i} value={sub}>{sub}</option>
-                      ))}
-                    </select>
-                  </div>
-                  <div>
-                    <label className="section-label text-gray-600 block mb-2">Priority Level</label>
-                    <select
-                      value={priority}
-                      onChange={e => setPriority(e.target.value)}
-                      className="gov-input"
-                    >
-                      <option value="Standard">Standard (SLA Routine)</option>
-                      <option value="High">High (Urgent Response)</option>
-                      <option value="Critical">Critical (Emergency Dispatch)</option>
-                    </select>
-                  </div>
+                {/* Sub-service — no manual priority (AI auto-assigns) */}
+                <div>
+                  <label className="section-label text-gray-600 block mb-2">Service Category</label>
+                  <select
+                    value={subService}
+                    onChange={e => setSubService(e.target.value)}
+                    className="gov-input"
+                  >
+                    {subServicesMap[serviceType].map((sub, i) => (
+                      <option key={i} value={sub}>{sub}</option>
+                    ))}
+                  </select>
+                  <p className="text-[10px] text-gray-400 mt-1.5">⚡ AI Priority Engine will auto-detect urgency from your description.</p>
                 </div>
 
                 {/* Description */}

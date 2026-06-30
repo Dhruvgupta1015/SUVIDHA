@@ -3,10 +3,12 @@ import { useNavigate } from 'react-router-dom';
 import {
   ShieldAlert, Users, Settings, Activity, PlusCircle, Trash2,
   CheckCircle2, Clock, AlertTriangle, Building2, UserCheck,
-  ToggleLeft, ToggleRight, Database, Cpu, Search, RefreshCw, BarChart2
+  ToggleLeft, ToggleRight, Database, Cpu, Search, RefreshCw, BarChart2, Zap, X
 } from 'lucide-react';
 import { adminAPI } from '../utils/api';
 import { useAccessibility } from '../context/AccessibilityContext';
+import { computeSlaStatus } from '../utils/slaEngine';
+import { io } from 'socket.io-client';
 
 export const AdminDashboard = () => {
   const navigate = useNavigate();
@@ -31,6 +33,10 @@ export const AdminDashboard = () => {
   const [newOffDept, setNewOffDept] = useState('Electricity Department');
   const [formSuccess, setFormSuccess] = useState(false);
   const [submittingOfficer, setSubmittingOfficer] = useState(false);
+
+  // Urgent alert toast (T8)
+  const [urgentToast, setUrgentToast] = useState(null);
+  const [urgentAlerts, setUrgentAlerts] = useState([]);
 
   // Active Services state (Saved in local storage for dynamic citizen response)
   const [servicesConfig, setServicesConfig] = useState(() => {
@@ -72,6 +78,18 @@ export const AdminDashboard = () => {
     fetchAdminDashboard();
     fetchOfficers();
   }, [navigate]);
+
+  // Socket: urgentAlert listener (T8)
+  useEffect(() => {
+    const socketUrl = import.meta.env.VITE_SOCKET_URL || 'http://localhost:5000';
+    const sock = io(socketUrl, { reconnection: true, reconnectionAttempts: 3 });
+    sock.on('urgentAlert', (data) => {
+      setUrgentToast(data);
+      setUrgentAlerts(prev => [data, ...prev].slice(0, 20));
+      setTimeout(() => setUrgentToast(null), 8000);
+    });
+    return () => sock.close();
+  }, []);
 
   const fetchAdminDashboard = async (silent = false) => {
     if (!silent) setLoading(true); else setRefreshing(true);
@@ -196,7 +214,22 @@ export const AdminDashboard = () => {
 
   return (
     <div className="flex-1 flex flex-col gap-6 animate-fade-up">
-      
+
+      {/* T8: Urgent Alert Toast */}
+      {urgentToast && (
+        <div className="fixed top-4 right-4 z-50 max-w-sm w-full animate-fade-in">
+          <div className="flex items-start gap-3 p-4 rounded-2xl border-2 border-red-400 bg-red-50 shadow-2xl">
+            <span className="text-2xl flex-shrink-0">🚨</span>
+            <div className="flex-1 min-w-0">
+              <p className="font-black text-red-800 text-sm">System Alert</p>
+              <p className="text-red-700 text-xs mt-0.5 leading-relaxed">{urgentToast.message}</p>
+              <p className="text-[10px] text-red-500 mt-1 font-mono">{urgentToast.requestId}</p>
+            </div>
+            <button onClick={() => setUrgentToast(null)} className="text-red-400 hover:text-red-700"><X className="w-4 h-4" /></button>
+          </div>
+        </div>
+      )}
+
       {/* 1. Header Banner */}
       {currentAdmin && (
         <div className="bg-white border border-gray-200 rounded-2xl p-5 flex flex-col sm:flex-row sm:items-center justify-between gap-4 shadow-sm">
@@ -279,6 +312,52 @@ export const AdminDashboard = () => {
                 ))}
               </div>
 
+              {/* T6: Immediate Attention Required Panel */}
+              {(() => {
+                const critical  = slaViolations.filter(t => {
+                  const { slaStatus } = computeSlaStatus(t.createdAt);
+                  return slaStatus === 'Critical' || slaStatus === 'Escalated';
+                });
+                const escalated = slaViolations.filter(t => computeSlaStatus(t.createdAt).slaStatus === 'Escalated');
+                const emergencyCount = urgentAlerts.filter(a => a.isEmergency).length;
+                const criticalPriority = slaViolations.filter(t => t.priority === 'Critical').length;
+                const hasAlert = emergencyCount > 0 || critical.length > 0 || criticalPriority > 0;
+                if (!hasAlert) return null;
+                return (
+                  <div className="p-4 rounded-2xl border-2 border-red-300 bg-red-50 animate-fade-in">
+                    <div className="flex items-center gap-2 mb-3">
+                      <span className="text-xl">🚨</span>
+                      <h4 className="font-black text-red-700 text-sm" style={{ fontFamily: 'Outfit, sans-serif' }}>Immediate Attention Required</h4>
+                      <span className="ml-auto text-[10px] text-red-500 font-bold uppercase tracking-wider animate-pulse">LIVE</span>
+                    </div>
+                    <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+                      {[
+                        { label: '🚨 Emergency Reports',   value: emergencyCount,      color: 'text-red-700 bg-red-100 border-red-200' },
+                        { label: '⚡ Critical Priority',    value: criticalPriority,    color: 'text-orange-700 bg-orange-100 border-orange-200' },
+                        { label: '🔴 SLA Escalated',       value: escalated.length,    color: 'text-red-700 bg-red-100 border-red-200' },
+                        { label: '⚠️ SLA Breached',        value: critical.length,     color: 'text-amber-700 bg-amber-100 border-amber-200' },
+                      ].map(c => (
+                        <div key={c.label} className={`p-3 rounded-xl border text-center ${c.color}`}>
+                          <div className="text-2xl font-black" style={{ fontFamily: 'Outfit, sans-serif' }}>{c.value}</div>
+                          <div className="text-[10px] font-bold mt-0.5">{c.label}</div>
+                        </div>
+                      ))}
+                    </div>
+                    {urgentAlerts.length > 0 && (
+                      <div className="mt-3 space-y-1.5 max-h-[120px] overflow-y-auto">
+                        {urgentAlerts.slice(0, 5).map((a, i) => (
+                          <div key={i} className="flex items-center gap-2 text-[10px] text-red-700 bg-white border border-red-100 rounded-lg p-2">
+                            <span>🚨</span>
+                            <span className="font-mono font-bold">{a.requestId}</span>
+                            <span className="flex-1 truncate">{a.message}</span>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                );
+              })()}
+
               {/* Breakdown & SLA Splits */}
               <div className="grid grid-cols-1 md:grid-cols-5 gap-5">
                 
@@ -313,10 +392,10 @@ export const AdminDashboard = () => {
                   </div>
                 </div>
 
-                {/* SLA Violations Queue (3 cols) */}
+                {/* SLA Violations Queue with tier badges (3 cols) */}
                 <div className="md:col-span-3 gov-card p-5 space-y-4">
                   <div className="flex justify-between items-center pb-2 border-b border-gray-100">
-                    <h4 className="section-label text-gray-700">SLA Violations (&gt;48 Hours)</h4>
+                    <h4 className="section-label text-gray-700">SLA Intelligence Monitor</h4>
                     <span className="status-badge badge-critical">Immediate Action</span>
                   </div>
 
@@ -324,24 +403,42 @@ export const AdminDashboard = () => {
                     <div className="py-14 text-center text-xs text-gray-400 space-y-2">
                       <CheckCircle2 className="w-8 h-8 text-green-500 mx-auto" />
                       <p className="font-bold text-gray-700">All connections within SLA limits</p>
-                      <p className="text-[10px]">No active complaints exceed the 48h limit.</p>
+                      <p className="text-[10px]">No active complaints exceed the 24h warning threshold.</p>
                     </div>
                   ) : (
                     <div className="space-y-2 max-h-[260px] overflow-y-auto pr-1">
-                      {slaViolations.map(ticket => (
-                        <div key={ticket.requestId} className="p-3 bg-red-50/40 border border-red-100 rounded-xl flex justify-between items-center text-xs">
-                          <div>
-                            <span className="font-mono font-bold text-[#2563EB]">{ticket.requestId}</span>
-                            <span className="text-[10px] text-gray-500 capitalize block mt-0.5">
-                              {ticket.serviceType} · {ticket.citizenId?.name || 'Aadhaar User'}
-                            </span>
+                      {slaViolations.map(ticket => {
+                        const { slaStatus, ageHours } = computeSlaStatus(ticket.createdAt);
+                        const tierColor = {
+                          Escalated: 'bg-red-50 border-red-200',
+                          Critical:  'bg-orange-50 border-orange-200',
+                          Warning:   'bg-yellow-50 border-yellow-200',
+                          Safe:      'bg-gray-50 border-gray-100'
+                        }[slaStatus] || 'bg-gray-50 border-gray-100';
+                        const tierText = {
+                          Escalated: 'text-red-700',
+                          Critical:  'text-orange-700',
+                          Warning:   'text-yellow-700',
+                          Safe:      'text-gray-500'
+                        }[slaStatus] || 'text-gray-500';
+                        return (
+                          <div key={ticket.requestId} className={`p-3 border rounded-xl flex justify-between items-center text-xs ${tierColor}`}>
+                            <div>
+                              <span className="font-mono font-bold text-[#2563EB]">{ticket.requestId}</span>
+                              {ticket.isEmergency && <span className="ml-1">🚨</span>}
+                              <span className="text-[10px] text-gray-500 capitalize block mt-0.5">
+                                {ticket.serviceType} · {ticket.citizenId?.name || 'Aadhaar User'}
+                              </span>
+                            </div>
+                            <div className="text-right">
+                              <span className={`text-[9px] font-black block uppercase tracking-wider ${tierText}`}>
+                                {slaStatus === 'Escalated' ? '🔴' : slaStatus === 'Critical' ? '🟠' : '⚠️'} {slaStatus} ({ageHours}h)
+                              </span>
+                              <span className="text-[9px] text-gray-400 font-medium">{new Date(ticket.createdAt).toLocaleDateString('en-IN')}</span>
+                            </div>
                           </div>
-                          <div className="text-right">
-                            <span className="text-[9px] font-black text-red-600 block uppercase tracking-wider">Overdue</span>
-                            <span className="text-[9px] text-gray-400 font-medium">{new Date(ticket.createdAt).toLocaleDateString('en-IN')}</span>
-                          </div>
-                        </div>
-                      ))}
+                        );
+                      })}
                     </div>
                   )}
                 </div>

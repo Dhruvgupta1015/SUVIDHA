@@ -52,6 +52,23 @@ const requestSchema = new mongoose.Schema({
     enum: ['Standard', 'High', 'Critical'],
     default: 'Standard'
   },
+  priorityReason: {
+    type: String,
+    default: 'No urgency keywords detected — routine complaint'
+  },
+  isEmergency: {
+    type: Boolean,
+    default: false
+  },
+  slaStatus: {
+    type: String,
+    enum: ['Safe', 'Warning', 'Critical', 'Escalated'],
+    default: 'Safe'
+  },
+  routingReason: {
+    type: String,
+    default: ''
+  },
   documents: [
     {
       name:        { type: String, required: true },
