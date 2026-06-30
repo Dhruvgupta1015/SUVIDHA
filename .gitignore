@@ -13,9 +13,10 @@ dist-ssr/
 # ── Environment files (NEVER commit secrets) ─
 .env
 .env.local
-.env.production
 .env.*.local
 backend/.env
+# NOTE: .env.production is intentionally tracked — it contains only the public API URL (no secrets)
+# Secrets (MONGO_URI, JWT_SECRET) live in backend/.env which IS gitignored
 
 # ── Uploaded files (runtime data, not source) ─
 backend/uploads/*

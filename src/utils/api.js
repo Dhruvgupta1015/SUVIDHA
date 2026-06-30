@@ -1,9 +1,16 @@
 import axios from 'axios';
 
+// VITE_API_URL is injected at build time via .env.production (Vercel) or .env.development (local)
+// Production: https://suvidha-ws4v.onrender.com/api  |  Dev: http://localhost:5000/api
+const BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000/api';
+
+console.log('[SUVIDHA] API baseURL:', BASE_URL);
+
 const API = axios.create({
-  baseURL: import.meta.env.VITE_API_URL || 'http://localhost:5000/api',
-  timeout: 8000
+  baseURL: BASE_URL,
+  timeout: 10000
 });
+
 
 // Attach JWT automatically
 API.interceptors.request.use(
