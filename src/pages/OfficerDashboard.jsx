@@ -155,12 +155,7 @@ export const OfficerDashboard = () => {
         }, 2500);
       }
     } catch (err) {
-      console.error('[Officer Update Error]', err);
-
-      setErrorMsg(
-        err.response?.data?.message ||
-        'Failed to update ticket.'
-      );
+      setErrorMsg(err.friendlyMessage || 'Failed to update ticket. Please try again.');
     } finally {
       setSubmitting(false);
     }

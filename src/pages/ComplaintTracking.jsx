@@ -29,10 +29,16 @@ export const ComplaintTracking = () => {
   const [errorMsg, setErrorMsg] = useState('');
   const [socket, setSocket] = useState(null);
 
-  // Configure Socket connection loops
+  // Configure Socket connection with auto-reconnect for Render sleep/network blips
   useEffect(() => {
     const socketUrl = import.meta.env.VITE_SOCKET_URL || 'http://localhost:5000';
-    const newSocket = io(socketUrl);
+    const newSocket = io(socketUrl, {
+      reconnection: true,          // auto-reconnect on disconnect
+      reconnectionAttempts: 5,     // try up to 5 times
+      reconnectionDelay: 2000,     // wait 2s between attempts
+      reconnectionDelayMax: 10000, // cap delay at 10s
+      timeout: 15000               // match axios timeout for cold starts
+    });
     setSocket(newSocket);
 
     return () => newSocket.close();

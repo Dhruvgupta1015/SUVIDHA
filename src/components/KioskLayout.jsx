@@ -4,6 +4,7 @@ import { useLanguage } from '../context/LanguageContext';
 import { useAccessibility } from '../context/AccessibilityContext';
 import { LanguageSelector } from './LanguageSelector';
 import { AccessibilityPanel } from './AccessibilityPanel';
+import { logout } from '../utils/logout';
 import {
   Home,
   ArrowLeft,
@@ -94,11 +95,8 @@ export const KioskLayout = ({ children }) => {
   const handleLogout = () => {
     clearTimeout(sessionTimer.current);
     clearTimeout(warningTimer.current);
-    localStorage.removeItem('token');
-    localStorage.removeItem('user');
-    setCurrentUser(null);
     setSessionWarning(false);
-    navigate('/');
+    logout(); // centralized: clears localStorage + redirects to /auth
   };
 
   const isHome = location.pathname === '/';

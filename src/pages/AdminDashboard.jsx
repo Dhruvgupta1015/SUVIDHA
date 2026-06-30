@@ -96,9 +96,7 @@ export const AdminDashboard = () => {
       if (response.data && response.data.officers) {
         setOfficersList(response.data.officers);
       }
-    } catch (err) {
-      console.warn("Officers list call failed, falling back.");
-    }
+    } catch { /* silent — officers list is non-critical */ }
   };
 
   // Add Officer Account
@@ -131,7 +129,7 @@ export const AdminDashboard = () => {
         setTimeout(() => setFormSuccess(false), 2000);
       }
     } catch (err) {
-      setErrorMsg(err.response?.data?.message || 'Failed to register new officer.');
+      setErrorMsg(err.friendlyMessage || 'Failed to register new officer.');
     } finally {
       setSubmittingOfficer(false);
     }
@@ -147,7 +145,7 @@ export const AdminDashboard = () => {
       setOfficersList(prev => prev.filter(o => o._id !== id && o.id !== id));
       speak(`Deleted officer ${name}`);
     } catch (err) {
-      setErrorMsg(err.response?.data?.message || 'Failed to delete officer.');
+      setErrorMsg(err.friendlyMessage || 'Failed to delete officer.');
     }
   };
 

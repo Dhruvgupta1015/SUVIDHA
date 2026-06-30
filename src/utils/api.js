@@ -1,4 +1,5 @@
 import axios from 'axios';
+import { logout } from './logout';
 
 // VITE_API_URL is injected at build time via .env.production (Vercel) or .env.development (local)
 // Production: https://suvidha-ws4v.onrender.com/api  |  Dev: http://localhost:5000/api
@@ -6,7 +7,7 @@ const BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000/api';
 
 const API = axios.create({
   baseURL: BASE_URL,
-  timeout: 10000
+  timeout: 15000  // 15s — accommodates Render free tier cold starts (can take 10-12s)
 });
 
 // Attach JWT automatically
@@ -30,16 +31,14 @@ API.interceptors.response.use(
     const status = error.response?.status;
 
     // 401 — session expired or invalid token → clear storage and redirect
-    if (status === 401) {
-      localStorage.removeItem('token');
-      localStorage.removeItem('user');
-      if (!window.location.pathname.startsWith('/auth')) {
-        window.location.href = '/auth';
-      }
+    if (status === 401 && !window.location.pathname.startsWith('/auth')) {
+      logout(); // centralized: clears localStorage + redirects to /auth
     }
 
     // Map status codes to clean user-facing messages
+    const isTimeout = error.code === 'ECONNABORTED' || error.message?.includes('timeout');
     const friendlyMessage =
+      isTimeout                               ? 'Request timed out. The server may be waking up — please try again in a moment.' :
       !error.response                         ? 'Unable to connect to SUVIDHA server. Please check your connection.' :
       status === 401                          ? 'Session expired. Please login again.' :
       status === 403                          ? 'Access denied. You do not have permission for this action.' :

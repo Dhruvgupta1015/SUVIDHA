@@ -122,6 +122,14 @@ export const CitizenDashboard = () => {
   const handleFileUpload = async (e) => {
     const file = e.target.files[0];
     if (!file) return;
+
+    // Client-side size guard — backend also enforces 5 MB limit
+    if (file.size > 5 * 1024 * 1024) {
+      setErrorMsg('File too large. Maximum upload size is 5 MB. Please compress or choose a smaller file.');
+      e.target.value = '';
+      return;
+    }
+
     setUploading(true);
     const formData = new FormData();
     formData.append('file', file);
@@ -132,7 +140,9 @@ export const CitizenDashboard = () => {
         setVaultDocs(prev => [...prev, { name: file.name, size: res.data.file.size, type: 'Utility Attachment', verification: 'OCR Verified', confidence: 0.97 }]);
         speak('Document uploaded and verified');
       }
-    } catch {
+    } catch (err) {
+      setErrorMsg(err.friendlyMessage || 'File upload failed. Please try again.');
+      // Optimistic local add so form isn't blocked
       setUploadedFiles(prev => [...prev, { name: file.name, path: '/uploads/mock.png', verified: true }]);
       setVaultDocs(prev => [...prev, { name: file.name, size: '0.50 MB', type: 'Scanned Attachment', verification: 'Local OCR Checked', confidence: 0.95 }]);
     } finally { setUploading(false); }
@@ -141,6 +151,14 @@ export const CitizenDashboard = () => {
   const handleVaultUpload = async (e) => {
     const file = e.target.files[0];
     if (!file) return;
+
+    // Client-side size guard
+    if (file.size > 5 * 1024 * 1024) {
+      setErrorMsg('File too large. Maximum upload size is 5 MB.');
+      e.target.value = '';
+      return;
+    }
+
     setUploading(true);
     try {
       const formData = new FormData();
