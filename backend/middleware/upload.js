@@ -33,16 +33,37 @@ const storage = multer.diskStorage({
   }
 });
 
-// Strict file filter — validate both MIME type AND extension
-const fileFilter = (req, file, cb) => {
-  const ext = path.extname(file.originalname).toLowerCase();
-  const mimeOk = ALLOWED_MIME_TYPES.includes(file.mimetype);
-  const extOk  = ALLOWED_EXTENSIONS.includes(ext);
+// T5: MIME-to-extension cross-validation table — prevents spoofed extensions
+// e.g. a JPEG renamed as .pdf would have mimetype=image/jpeg but ext=.pdf → REJECTED
+const MIME_EXT_MATRIX = {
+  'image/jpeg':      ['.jpg', '.jpeg'],
+  'image/jpg':       ['.jpg', '.jpeg'],
+  'image/png':       ['.png'],
+  'application/pdf': ['.pdf']
+};
 
-  if (mimeOk && extOk) {
-    return cb(null, true);
+// Strict file filter — validate MIME type, extension, AND their cross-match
+const fileFilter = (req, file, cb) => {
+  const ext     = path.extname(file.originalname).toLowerCase();
+  const mime    = file.mimetype;
+  const allowed = MIME_EXT_MATRIX[mime];
+
+  // Step 1: MIME type must be in allowed list
+  if (!allowed) {
+    return cb(new multer.MulterError('LIMIT_UNEXPECTED_FILE', 'Allowed formats: JPEG, PNG, PDF only.'));
   }
-  cb(new multer.MulterError('LIMIT_UNEXPECTED_FILE', 'Allowed formats: JPEG, PNG, PDF only.'));
+
+  // Step 2: Extension must be in allowed list
+  if (!ALLOWED_EXTENSIONS.includes(ext)) {
+    return cb(new multer.MulterError('LIMIT_UNEXPECTED_FILE', 'File extension not allowed. Use .jpg, .jpeg, .png, or .pdf'));
+  }
+
+  // Step 3: Extension must match the declared MIME type (prevents spoofing)
+  if (!allowed.includes(ext)) {
+    return cb(new multer.MulterError('LIMIT_UNEXPECTED_FILE', `File extension "${ext}" does not match file type. Possible spoofed file detected.`));
+  }
+
+  cb(null, true);
 };
 
 export const upload = multer({

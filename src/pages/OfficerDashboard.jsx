@@ -439,6 +439,70 @@ export const OfficerDashboard = () => {
                 </div>
               </div>
 
+              {/* Evidence Review Panel — T8 */}
+              {selectedRequest.documents && selectedRequest.documents.length > 0 && (
+                <div className="gov-card p-5 space-y-3">
+                  <h4 className="font-black text-sm text-gray-900 flex items-center gap-2" style={{ fontFamily: 'Outfit, sans-serif' }}>
+                    <FileCheck className="w-4 h-4 text-[#2563EB]" />
+                    Evidence Review
+                    {selectedRequest.documents.some(d => d.flagged) && (
+                      <span className="status-badge badge-critical flex items-center gap-1 ml-auto">
+                        <AlertTriangle className="w-3 h-3" /> Suspicious
+                      </span>
+                    )}
+                  </h4>
+
+                  <div className="space-y-2">
+                    {selectedRequest.documents.map((doc, i) => (
+                      <div
+                        key={i}
+                        className={`p-3 rounded-xl border text-xs ${
+                          doc.flagged
+                            ? 'bg-amber-50 border-amber-200'
+                            : doc.verified
+                            ? 'bg-green-50 border-green-200'
+                            : 'bg-gray-50 border-gray-200'
+                        }`}
+                      >
+                        <div className="flex items-start justify-between gap-2">
+                          <div className="flex items-center gap-1.5 font-semibold text-gray-800 truncate">
+                            <Hash className="w-3 h-3 text-gray-400 flex-shrink-0" />
+                            <span className="truncate">{doc.name}</span>
+                          </div>
+                          <div className="flex items-center gap-1.5 flex-shrink-0">
+                            {doc.flagged ? (
+                              <span className="flex items-center gap-1 font-bold text-amber-700">
+                                <AlertTriangle className="w-3 h-3" /> Suspicious
+                              </span>
+                            ) : doc.verified ? (
+                              <span className="flex items-center gap-1 font-bold text-green-700">
+                                <ShieldCheck className="w-3 h-3" /> Verified
+                              </span>
+                            ) : (
+                              <span className="text-gray-400 font-medium">Unverified</span>
+                            )}
+                          </div>
+                        </div>
+                        <div className="mt-1.5 flex items-center justify-between">
+                          <span className="text-gray-500">
+                            Confidence:{' '}
+                            <span className={`font-bold ${
+                              doc.confidence >= 0.80 ? 'text-green-700' :
+                              doc.confidence >= 0.55 ? 'text-amber-700' : 'text-red-700'
+                            }`}>
+                              {Math.round((doc.confidence || 0) * 100)}%
+                            </span>
+                          </span>
+                          {doc.reason && (
+                            <span className="text-gray-400 italic truncate max-w-[140px]">{doc.reason}</span>
+                          )}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+
               {/* Action form */}
               <div className="gov-card p-5">
                 <h4 className="font-black text-sm text-gray-900 mb-4 flex items-center gap-2" style={{ fontFamily: 'Outfit, sans-serif' }}>

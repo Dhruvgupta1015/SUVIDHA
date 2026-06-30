@@ -103,6 +103,13 @@ export const CitizenDashboard = () => {
   const handleApplySubmit = async (e) => {
     e.preventDefault();
     if (!description.trim()) { setErrorMsg('Please enter a description.'); return; }
+
+    // Client-side evidence guard — mirrors backend T3 mandatory proof rule
+    if (serviceType !== 'general' && uploadedFiles.length === 0) {
+      setErrorMsg('Supporting evidence required for this complaint. Please upload at least one relevant document before submitting.');
+      return;
+    }
+
     setSubmitting(true); setErrorMsg('');
     try {
       const res = await requestAPI.create({ serviceType, subService, description, priority, documents: uploadedFiles });
@@ -113,8 +120,12 @@ export const CitizenDashboard = () => {
         setTimeout(() => { setFormSuccess(false); setActiveTab('timeline'); }, 1800);
       }
     } catch (err) {
-      setErrorMsg(err.response?.data?.message || 'Submission failed. A mock ticket was created.');
-      await fetchMyRequests(true);
+      // Use friendlyMessage for clean UX — do NOT create a mock ticket on validation failure
+      setErrorMsg(err.friendlyMessage || err.response?.data?.message || 'Submission failed. Please try again.');
+      // Only refresh timeline if it was a server error (5xx), not a validation rejection
+      if (!err.response || err.response.status >= 500) {
+        await fetchMyRequests(true);
+      }
     } finally { setSubmitting(false); }
   };
 
@@ -560,7 +571,32 @@ export const CitizenDashboard = () => {
 
                 {/* Document upload */}
                 <div>
-                  <label className="section-label text-gray-600 block mb-2">Attach Document Proofs</label>
+                  <label className="section-label text-gray-600 block mb-2">
+                    Attach Document Proofs
+                    {serviceType !== 'general' && (
+                      <span className="ml-2 text-red-500 font-bold">* Required</span>
+                    )}
+                  </label>
+
+                  {/* T3/T1 — Evidence hint: tell user what to upload */}
+                  {serviceType !== 'general' ? (
+                    <div className="mb-3 p-3 bg-blue-50 border border-blue-200 rounded-xl text-xs text-blue-800">
+                      <span className="font-bold">Evidence required</span> for{' '}
+                      <span className="capitalize font-bold">{serviceType}</span> complaints. Upload a relevant:
+                      {' '}{
+                        serviceType === 'electricity' ? 'electricity bill, meter reading photo, or power supply report' :
+                        serviceType === 'water'       ? 'water bill, leakage photo, or supply disruption notice' :
+                        serviceType === 'gas'         ? 'gas bill, cylinder photo, meter reading, or leak report' :
+                        serviceType === 'waste'       ? 'garbage dump photo, waste collection notice, or cleaning report' :
+                        'relevant document'
+                      }.
+                    </div>
+                  ) : (
+                    <div className="mb-3 p-3 bg-gray-50 border border-gray-200 rounded-xl text-xs text-gray-500">
+                      Evidence is <span className="font-bold">optional</span> for General complaints but strongly recommended.
+                    </div>
+                  )}
+
                   <div className="flex flex-wrap gap-2 items-center">
                     <button
                       type="button"
@@ -581,6 +617,7 @@ export const CitizenDashboard = () => {
                     ))}
                   </div>
                 </div>
+
 
                 <button
                   type="submit"

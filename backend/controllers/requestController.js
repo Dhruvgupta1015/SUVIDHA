@@ -1,6 +1,7 @@
 import mongoose from 'mongoose';
 import Request from '../models/Request.js';
 import User from '../models/User.js';
+import { validateAndScoreDocuments } from '../utils/evidenceValidator.js';
 
 /**
  * @desc    Create new civic request or complaint
@@ -12,7 +13,7 @@ export const createRequest = async (req, res) => {
     const { serviceType, subService, description, documents, priority } = req.body;
     const citizenId = req.user.id; // from protect middleware
 
-    // Input validation
+    // ── Input validation ──────────────────────────────────────────────────────
     const validServiceTypes = ['electricity', 'water', 'gas', 'waste', 'general'];
     const validPriorities   = ['Standard', 'High', 'Critical'];
 
@@ -29,12 +30,40 @@ export const createRequest = async (req, res) => {
       return res.status(400).json({ success: false, message: 'Invalid priority level. Must be: Standard, High, or Critical.' });
     }
 
-    // Map serviceType to realistic department
+    // ── T6: Duplicate complaint detection (same citizen, 24h window) ──────────
+    const oneDayAgo = new Date(Date.now() - 24 * 60 * 60 * 1000);
+    const duplicate = await Request.findOne({
+      citizenId,
+      serviceType,
+      subService: subService.trim(),
+      description: description.trim(),
+      createdAt: { $gte: oneDayAgo }
+    });
+
+    if (duplicate) {
+      return res.status(409).json({
+        success: false,
+        message: `Similar complaint already exists (${duplicate.requestId}). Please track your existing request before filing again.`
+      });
+    }
+
+    // ── T1 / T2 / T3 / T4: Evidence validation + confidence scoring ───────────
+    const { valid, message, scoredDocs } = validateAndScoreDocuments(
+      documents || [],
+      serviceType,
+      description
+    );
+
+    if (!valid) {
+      return res.status(400).json({ success: false, message });
+    }
+
+    // ── Map serviceType to department ─────────────────────────────────────────
     let assignedDepartment = 'General Administration';
     if (serviceType === 'electricity') assignedDepartment = 'Electricity Department';
-    else if (serviceType === 'water') assignedDepartment = 'Water Department';
-    else if (serviceType === 'gas') assignedDepartment = 'Gas Department';
-    else if (serviceType === 'waste') assignedDepartment = 'Waste Management';
+    else if (serviceType === 'water')  assignedDepartment = 'Water Department';
+    else if (serviceType === 'gas')    assignedDepartment = 'Gas Department';
+    else if (serviceType === 'waste')  assignedDepartment = 'Waste Management';
 
     const request = await Request.create({
       citizenId,
@@ -43,7 +72,7 @@ export const createRequest = async (req, res) => {
       description,
       priority: priority || 'Standard',
       assignedDepartment,
-      documents: documents || []
+      documents: scoredDocs  // already scored + flagged by evidenceValidator
     });
 
     const populatedRequest = await Request.findById(request._id).populate('citizenId', 'name mobile');
