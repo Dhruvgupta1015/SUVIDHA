@@ -22,16 +22,16 @@ const priorityBadge = (p) => {
 
 const serviceIcon = (type) => ({
   electricity: <Zap className="w-4 h-4 text-[#2563EB]" />,
-  water:       <Droplet className="w-4 h-4 text-cyan-600" />,
-  gas:         <Flame className="w-4 h-4 text-orange-500" />,
-  waste:       <Trash2 className="w-4 h-4 text-green-600" />,
+  water: <Droplet className="w-4 h-4 text-cyan-600" />,
+  gas: <Flame className="w-4 h-4 text-orange-500" />,
+  waste: <Trash2 className="w-4 h-4 text-green-600" />,
 }[type] || <FileText className="w-4 h-4 text-purple-500" />);
 
 const deptTeams = {
   'Electricity Department': ['BESCOM Maintenance Unit 2', 'Grid Safety Wing C', 'Substation Emergency Crew', 'Line Inspection Team Alpha'],
-  'Water Department':       ['BWSSB Leakage Squad 4', 'Main Supply Grid Crew', 'Emergency Piping Unit B', 'Reservoir Maintenance Wing'],
-  'Gas Department':         ['GAIL Pipeline Inspect Unit 3', 'Safety Audit Inspector Crew', 'Emergency Gas Valve Squad', 'Meter Repair Crew A'],
-  'Waste Management':       ['BBMP Trash Truck Route 3', 'Drainage Sweeper Crew Delta', 'Solid Waste Landfill Unit', 'Public Health Sanitation Wing'],
+  'Water Department': ['BWSSB Leakage Squad 4', 'Main Supply Grid Crew', 'Emergency Piping Unit B', 'Reservoir Maintenance Wing'],
+  'Gas Department': ['GAIL Pipeline Inspect Unit 3', 'Safety Audit Inspector Crew', 'Emergency Gas Valve Squad', 'Meter Repair Crew A'],
+  'Waste Management': ['BBMP Trash Truck Route 3', 'Drainage Sweeper Crew Delta', 'Solid Waste Landfill Unit', 'Public Health Sanitation Wing'],
   'General Administration': ['General Admin Crew 1', 'Streetlight Repair Unit 5', 'Nodal Cell Inspection Squad', 'Field Verification Team'],
 };
 
@@ -40,28 +40,28 @@ export const OfficerDashboard = () => {
   const { speak } = useAccessibility();
 
   const [currentOfficer, setCurrentOfficer] = useState(null);
-  const [allRequests, setAllRequests]       = useState([]);
+  const [allRequests, setAllRequests] = useState([]);
   const [selectedRequest, setSelectedRequest] = useState(null);
-  const [loading, setLoading]               = useState(false);
-  const [refreshing, setRefreshing]         = useState(false);
-  const [errorMsg, setErrorMsg]             = useState('');
-  const [actionSuccess, setActionSuccess]   = useState(false);
+  const [loading, setLoading] = useState(false);
+  const [refreshing, setRefreshing] = useState(false);
+  const [errorMsg, setErrorMsg] = useState('');
+  const [actionSuccess, setActionSuccess] = useState(false);
 
   /* Filter & Search state */
-  const [searchQuery, setSearchQuery]       = useState('');
-  const [statusFilter, setStatusFilter]     = useState('All');
+  const [searchQuery, setSearchQuery] = useState('');
+  const [statusFilter, setStatusFilter] = useState('All');
   const [priorityFilter, setPriorityFilter] = useState('All');
-  const [sortBy, setSortBy]                 = useState('newest');
+  const [sortBy, setSortBy] = useState('newest');
 
   /* Action form */
-  const [statusVal, setStatusVal]           = useState('In-Progress');
+  const [statusVal, setStatusVal] = useState('In-Progress');
   const [assignedTeamVal, setAssignedTeamVal] = useState('');
-  const [remarksVal, setRemarksVal]         = useState('');
-  const [submitting, setSubmitting]         = useState(false);
+  const [remarksVal, setRemarksVal] = useState('');
+  const [submitting, setSubmitting] = useState(false);
 
   /* ─── Auth guard ─── */
   useEffect(() => {
-    const token   = localStorage.getItem('token');
+    const token = localStorage.getItem('token');
     const userStr = localStorage.getItem('user');
     if (!token || !userStr) { navigate('/auth?role=officer'); return; }
     const user = JSON.parse(userStr);
@@ -103,28 +103,68 @@ export const OfficerDashboard = () => {
   /* ─── Submit action ─── */
   const handleActionSubmit = async (e) => {
     e.preventDefault();
+
     if (!selectedRequest) return;
-    setSubmitting(true); setErrorMsg(''); setActionSuccess(false);
+
+    setSubmitting(true);
+    setErrorMsg('');
+    setActionSuccess(false);
+
     try {
-      const payload = { status: statusVal, assignedTeam: assignedTeamVal, remarks: remarksVal };
-      const res = await requestAPI.updateStatus(selectedRequest.requestId, payload);
+      const payload = {
+        status: statusVal,
+        assignedTeam: assignedTeamVal,
+        remarks: remarksVal
+      };
+
+      // Step 1: Update request in backend
+      const res = await requestAPI.updateStatus(
+        selectedRequest.requestId,
+        payload
+      );
+
       if (res.data?.success) {
-        setActionSuccess(true);
-        speak(`Ticket ${selectedRequest.requestId} updated to ${statusVal}`);
-        const updated = allRequests.map(r =>
-          r.requestId === selectedRequest.requestId
-            ? { ...r, ...payload }
-            : r
+        // Step 2: Fetch latest updated department queue
+        const refreshed = await requestAPI.departmentRequests();
+
+        const updatedRequests = refreshed.data.requests || [];
+
+        // Step 3: Update all requests state
+        setAllRequests(updatedRequests);
+
+        // Step 4: Find latest updated selected request
+        const latestRequest = updatedRequests.find(
+          (r) => r.requestId === selectedRequest.requestId
         );
-        setAllRequests(updated);
-        setSelectedRequest({ ...selectedRequest, ...payload });
-        setTimeout(() => setActionSuccess(false), 2500);
+
+        if (latestRequest) {
+          setSelectedRequest(latestRequest);
+
+          // Sync form values with latest DB values
+          initForm(latestRequest);
+        }
+
+        setActionSuccess(true);
+
+        speak(
+          `Ticket ${selectedRequest.requestId} updated successfully`
+        );
+
+        setTimeout(() => {
+          setActionSuccess(false);
+        }, 2500);
       }
     } catch (err) {
-      setErrorMsg(err.response?.data?.message || 'Failed to update ticket.');
-    } finally { setSubmitting(false); }
-  };
+      console.error('[Officer Update Error]', err);
 
+      setErrorMsg(
+        err.response?.data?.message ||
+        'Failed to update ticket.'
+      );
+    } finally {
+      setSubmitting(false);
+    }
+  };
   /* ─── Filtering + Sorting ─── */
   const filteredRequests = allRequests
     .filter(r => {
@@ -132,13 +172,13 @@ export const OfficerDashboard = () => {
         r.requestId?.toLowerCase().includes(searchQuery.toLowerCase()) ||
         r.citizenId?.name?.toLowerCase().includes(searchQuery.toLowerCase()) ||
         r.subService?.toLowerCase().includes(searchQuery.toLowerCase());
-      const matchStatus   = statusFilter === 'All'   || r.status === statusFilter;
+      const matchStatus = statusFilter === 'All' || r.status === statusFilter;
       const matchPriority = priorityFilter === 'All' || r.priority === priorityFilter;
       return matchSearch && matchStatus && matchPriority;
     })
     .sort((a, b) => {
-      if (sortBy === 'newest')   return new Date(b.createdAt) - new Date(a.createdAt);
-      if (sortBy === 'oldest')   return new Date(a.createdAt) - new Date(b.createdAt);
+      if (sortBy === 'newest') return new Date(b.createdAt) - new Date(a.createdAt);
+      if (sortBy === 'oldest') return new Date(a.createdAt) - new Date(b.createdAt);
       if (sortBy === 'priority') {
         const pOrder = { Critical: 0, High: 1, Standard: 2 };
         return (pOrder[a.priority] ?? 2) - (pOrder[b.priority] ?? 2);
@@ -148,11 +188,11 @@ export const OfficerDashboard = () => {
 
   /* ─── Stats ─── */
   const stats = {
-    total:      allRequests.length,
-    pending:    allRequests.filter(r => r.status === 'Pending').length,
+    total: allRequests.length,
+    pending: allRequests.filter(r => r.status === 'Pending').length,
     inProgress: allRequests.filter(r => r.status === 'In-Progress').length,
-    resolved:   allRequests.filter(r => r.status === 'Completed').length,
-    critical:   allRequests.filter(r => r.priority === 'Critical').length,
+    resolved: allRequests.filter(r => r.status === 'Completed').length,
+    critical: allRequests.filter(r => r.priority === 'Critical').length,
   };
 
   /* ─── Teams for current department ─── */
@@ -199,11 +239,11 @@ export const OfficerDashboard = () => {
       {/* ══ Stats Strip ══ */}
       <div className="grid grid-cols-2 md:grid-cols-5 gap-3">
         {[
-          { label: 'Total Tickets',  value: stats.total,      color: 'text-gray-700 bg-gray-50 border-gray-200',          icon: <Layers className="w-4 h-4" /> },
-          { label: 'Pending',        value: stats.pending,    color: 'text-amber-700 bg-amber-50 border-amber-200',        icon: <Clock className="w-4 h-4" /> },
-          { label: 'In Progress',    value: stats.inProgress, color: 'text-blue-700 bg-blue-50 border-blue-200',           icon: <TrendingUp className="w-4 h-4" /> },
-          { label: 'Resolved',       value: stats.resolved,   color: 'text-green-700 bg-green-50 border-green-200',        icon: <CheckCircle2 className="w-4 h-4" /> },
-          { label: 'Critical',       value: stats.critical,   color: 'text-red-700 bg-red-50 border-red-200',              icon: <AlertTriangle className="w-4 h-4" /> },
+          { label: 'Total Tickets', value: stats.total, color: 'text-gray-700 bg-gray-50 border-gray-200', icon: <Layers className="w-4 h-4" /> },
+          { label: 'Pending', value: stats.pending, color: 'text-amber-700 bg-amber-50 border-amber-200', icon: <Clock className="w-4 h-4" /> },
+          { label: 'In Progress', value: stats.inProgress, color: 'text-blue-700 bg-blue-50 border-blue-200', icon: <TrendingUp className="w-4 h-4" /> },
+          { label: 'Resolved', value: stats.resolved, color: 'text-green-700 bg-green-50 border-green-200', icon: <CheckCircle2 className="w-4 h-4" /> },
+          { label: 'Critical', value: stats.critical, color: 'text-red-700 bg-red-50 border-red-200', icon: <AlertTriangle className="w-4 h-4" /> },
         ].map(s => (
           <div key={s.label} className="gov-card p-4 flex items-center gap-3">
             <div className={`w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0 border ${s.color}`}>
@@ -259,9 +299,8 @@ export const OfficerDashboard = () => {
                   <button
                     key={s}
                     onClick={() => setStatusFilter(s)}
-                    className={`px-2.5 py-1 rounded-md text-[10px] font-bold transition whitespace-nowrap ${
-                      statusFilter === s ? 'bg-white text-gray-900 shadow-sm' : 'text-gray-500 hover:text-gray-700'
-                    }`}
+                    className={`px-2.5 py-1 rounded-md text-[10px] font-bold transition whitespace-nowrap ${statusFilter === s ? 'bg-white text-gray-900 shadow-sm' : 'text-gray-500 hover:text-gray-700'
+                      }`}
                   >
                     {s}
                   </button>
@@ -274,9 +313,8 @@ export const OfficerDashboard = () => {
                   <button
                     key={p}
                     onClick={() => setPriorityFilter(p)}
-                    className={`px-2.5 py-1 rounded-md text-[10px] font-bold transition whitespace-nowrap ${
-                      priorityFilter === p ? 'bg-white text-gray-900 shadow-sm' : 'text-gray-500 hover:text-gray-700'
-                    }`}
+                    className={`px-2.5 py-1 rounded-md text-[10px] font-bold transition whitespace-nowrap ${priorityFilter === p ? 'bg-white text-gray-900 shadow-sm' : 'text-gray-500 hover:text-gray-700'
+                      }`}
                   >
                     {p}
                   </button>
@@ -332,11 +370,10 @@ export const OfficerDashboard = () => {
                       <tr
                         key={req.requestId}
                         onClick={() => handleSelectRequest(req)}
-                        className={`cursor-pointer transition ${
-                          selectedRequest?.requestId === req.requestId
+                        className={`cursor-pointer transition ${selectedRequest?.requestId === req.requestId
                             ? 'bg-blue-50/40 border-l-2 border-l-[#2563EB]'
                             : 'hover:bg-gray-50'
-                        }`}
+                          }`}
                       >
                         <td className="px-4 py-3 font-mono font-bold text-[#2563EB]">{req.requestId}</td>
                         <td className="px-4 py-3">
@@ -375,10 +412,9 @@ export const OfficerDashboard = () => {
                       <span className={priorityBadge(selectedRequest.priority)}>{selectedRequest.priority}</span>
                     </div>
                   </div>
-                  <div className={`w-9 h-9 rounded-xl flex items-center justify-center ${
-                    selectedRequest.priority === 'Critical' ? 'bg-red-50' :
-                    selectedRequest.priority === 'High'     ? 'bg-amber-50' : 'bg-gray-50'
-                  }`}>
+                  <div className={`w-9 h-9 rounded-xl flex items-center justify-center ${selectedRequest.priority === 'Critical' ? 'bg-red-50' :
+                      selectedRequest.priority === 'High' ? 'bg-amber-50' : 'bg-gray-50'
+                    }`}>
                     {serviceIcon(selectedRequest.serviceType)}
                   </div>
                 </div>
