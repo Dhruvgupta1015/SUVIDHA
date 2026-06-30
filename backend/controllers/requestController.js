@@ -4,6 +4,20 @@ import User from '../models/User.js';
 import { validateAndScoreDocuments, rescoreDocument } from '../utils/evidenceValidator.js';
 import { detectPriority } from '../utils/priorityEngine.js';
 import { routeComplaint } from '../utils/routingEngine.js';
+import { getRedis } from '../config/redis.js';
+import cloudinary from '../config/cloudinary.js';
+import { logAudit } from '../utils/auditLogger.js';
+
+// Helper to broadcast and cache urgent alerts
+const broadcastUrgentAlert = (io, payload) => {
+  io.emit('urgentAlert', payload);
+  try {
+    const redis = getRedis();
+    redis.lpush('urgent_alerts', JSON.stringify(payload))
+      .then(() => redis.ltrim('urgent_alerts', 0, 49))
+      .catch(err => console.error('[Redis] Failed to cache alert', err));
+  } catch (err) {}
+};
 
 /**
  * @desc    Create new civic request or complaint
@@ -108,7 +122,7 @@ export const createRequest = async (req, res) => {
 
       // Cat3 T8: Real-time urgency alert for officer/admin dashboards
       if (priority === 'Critical' || isEmergency) {
-        io.emit('urgentAlert', {
+        broadcastUrgentAlert(io, {
           requestId:   request.requestId,
           priority:    request.priority,
           isEmergency: request.isEmergency,
@@ -117,6 +131,26 @@ export const createRequest = async (req, res) => {
           time:        new Date().toISOString()
         });
       }
+    }
+
+    // -- Phase 5: Audit Trail --
+    await logAudit({
+      actorId: citizenId,
+      actorRole: 'citizen',
+      action: 'complaint_created',
+      targetRequest: request._id,
+      ipAddress: req.ip,
+      metadata: { priority, isEmergency, serviceType }
+    });
+    
+    if (isEmergency) {
+      await logAudit({
+        actorId: null,
+        actorRole: 'system',
+        action: 'emergency_triggered',
+        targetRequest: request._id,
+        metadata: { trigger: 'AI Analysis', priorityScore }
+      });
     }
 
     return res.status(201).json({
@@ -187,7 +221,7 @@ export const createEmergencyRequest = async (req, res) => {
 
     const io = req.app.get('io');
     if (io) {
-      io.emit('urgentAlert', {
+      broadcastUrgentAlert(io, {
         requestId:   request.requestId,
         priority:    'Critical',
         isEmergency: true,
@@ -261,9 +295,18 @@ export const checkAndEscalateSla = async (req, res) => {
 
       await request.save();
 
+      // -- Phase 5: Audit Trail --
+      await logAudit({
+        actorId: null,
+        actorRole: 'system',
+        action: 'sla_escalated',
+        targetRequest: request._id,
+        metadata: { message: `SLA Escalated: ${request.requestId} is ${ageHours}h old.` }
+      });
+
       // Broadcast urgentAlert (T8)
       if (io) {
-        io.emit('urgentAlert', {
+        broadcastUrgentAlert(io, {
           requestId:   request.requestId,
           priority:    request.priority,
           isEmergency: request.isEmergency,
@@ -426,10 +469,20 @@ export const updateRequestStatus = async (req, res) => {
 
     await request.save();
 
-    // Emit live WebSocket update
+    // -- Phase 5: Audit Trail --
+    await logAudit({
+      actorId: staff._id,
+      actorRole: staff.role,
+      action: 'status_updated',
+      targetRequest: request._id,
+      ipAddress: req.ip,
+      metadata: { newStatus: request.status, assignedTeam: request.assignedTeam, remarks: request.remarks }
+    });
+
+    // Emit live WebSocket update to the specific citizen tracking room
     const io = req.app.get('io');
     if (io) {
-      io.emit('statusUpdate', {
+      io.to(request.requestId).emit('statusUpdate', {
         requestId: request.requestId,
         status: request.status,
         assignedTeam: request.assignedTeam,
@@ -508,6 +561,17 @@ export const evidenceAction = async (req, res) => {
 
     await request.save();
 
+    // -- Phase 5: Audit Trail --
+    const auditAction = action === 'approve' ? 'evidence_approved' : action === 'reject' ? 'evidence_rejected' : 'reupload_requested';
+    await logAudit({
+      actorId: officerId,
+      actorRole: req.user?.role || 'officer',
+      action: auditAction,
+      targetRequest: request._id,
+      ipAddress: req.ip,
+      metadata: { documentIndex: idx, documentName: doc.name }
+    });
+
     return res.status(200).json({
       success: true,
       message: `Evidence ${action === 'approve' ? 'approved' : action === 'reject' ? 'rejected' : 're-upload requested'} successfully.`,
@@ -523,14 +587,14 @@ export const evidenceAction = async (req, res) => {
  * @route   PUT /api/requests/:id/reupload
  * @access  Private (Citizen — own complaint only)
  */
-export const reuploadeEvidence = async (req, res) => {
+export const reuploadEvidence = async (req, res) => {
   try {
     const { id }              = req.params;
-    const { docIndex, name, path: filePath } = req.body;
+    const { docIndex, name, secureUrl, publicId, mimeType, size } = req.body;
     const citizenId           = req.user.id;
 
-    if (!name || !filePath) {
-      return res.status(400).json({ success: false, message: 'Document name and path are required.' });
+    if (!name || (!secureUrl && !req.body.path)) {
+      return res.status(400).json({ success: false, message: 'Document name and secureUrl/path are required.' });
     }
 
     // Safe ID resolution
@@ -569,13 +633,27 @@ export const reuploadeEvidence = async (req, res) => {
     }
 
     // Re-score with deterministic engine
-    const scored = rescoreDocument(name, filePath, request.serviceType, request.description);
+    // (Notice: we use secureUrl or fallback path for the deterministic score)
+    const urlOrPath = secureUrl || req.body.path;
+    const scored = rescoreDocument(name, urlOrPath, request.serviceType, request.description);
+
+    // Delete old Cloudinary file if it exists and a new one was uploaded
+    if (existingDoc.publicId && existingDoc.publicId !== publicId) {
+      try {
+        await cloudinary.uploader.destroy(existingDoc.publicId);
+      } catch (err) {
+        console.warn(`[Cloudinary] Failed to delete old asset: ${existingDoc.publicId}`, err);
+      }
+    }
 
     // Replace document in-place — preserve ticket lifecycle
     request.documents[idx] = {
       ...existingDoc.toObject(),
       name:        scored.name,
-      path:        scored.path,
+      secureUrl:   secureUrl || scored.path,
+      publicId:    publicId || existingDoc.publicId,
+      mimeType:    mimeType || existingDoc.mimeType,
+      size:        size || existingDoc.size,
       verified:    scored.verified,
       confidence:  scored.confidence,
       flagged:     scored.flagged,
@@ -586,12 +664,112 @@ export const reuploadeEvidence = async (req, res) => {
 
     await request.save();
 
+    // -- Phase 5: Audit Trail --
+    await logAudit({
+      actorId: citizenId,
+      actorRole: 'citizen',
+      action: 'evidence_uploaded',
+      targetRequest: request._id,
+      ipAddress: req.ip,
+      metadata: { documentIndex: idx, documentName: name }
+    });
+
     return res.status(200).json({
       success:  true,
       message:  'Evidence re-uploaded and re-scored successfully.',
       document: request.documents[idx],
       request
     });
+  } catch (error) {
+    return res.status(500).json({ success: false, message: error.message });
+  }
+};
+
+/**
+ * @desc    Delete a request and its cloud assets
+ * @route   DELETE /api/requests/:id
+ * @access  Private (Admin / Owner)
+ */
+export const deleteRequest = async (req, res) => {
+  try {
+    const { id } = req.params;
+    let query = mongoose.Types.ObjectId.isValid(id) ? { _id: id } : { requestId: id.toUpperCase() };
+
+    const request = await Request.findOne(query);
+    if (!request) {
+      return res.status(404).json({ success: false, message: 'Request not found.' });
+    }
+
+    // Delete all associated Cloudinary files
+    if (request.documents && request.documents.length > 0) {
+      for (const doc of request.documents) {
+        if (doc.publicId) {
+          try {
+            await cloudinary.uploader.destroy(doc.publicId);
+          } catch (err) {
+            console.warn(`[Cloudinary] Failed to delete asset during request deletion: ${doc.publicId}`, err);
+          }
+        }
+      }
+    }
+
+    await Request.deleteOne({ _id: request._id });
+    return res.status(200).json({ success: true, message: 'Request and associated cloud files deleted successfully.' });
+  } catch (error) {
+    return res.status(500).json({ success: false, message: error.message });
+  }
+};
+
+/**
+ * @desc    Get audit logs for a specific request
+ * @route   GET /api/requests/:id/audit-logs
+ * @access  Private (Citizen - limited, Admin/Officer - full)
+ */
+export const getComplaintAuditLogs = async (req, res) => {
+  try {
+    const { id } = req.params;
+    let query = mongoose.Types.ObjectId.isValid(id) ? { _id: id } : { requestId: id.toUpperCase() };
+
+    const request = await Request.findOne(query);
+    if (!request) {
+      return res.status(404).json({ success: false, message: 'Request not found.' });
+    }
+
+    // Authorization: citizen can only view their own request's logs
+    const userId = req.user.id;
+    const userRole = req.user.role;
+    if (userRole === 'citizen' && String(request.citizenId) !== String(userId)) {
+      return res.status(403).json({ success: false, message: 'Not authorized to view these logs.' });
+    }
+
+    let logs = await mongoose.model('AuditLog').find({ targetRequest: request._id })
+      .populate('actorId', 'name email role department')
+      .sort({ createdAt: -1 });
+
+    // Filter for citizen (limited view)
+    if (userRole === 'citizen') {
+      const allowedActions = [
+        'complaint_created',
+        'evidence_uploaded',
+        'reupload_requested',
+        'status_updated',
+        'evidence_approved',
+        'evidence_rejected'
+      ];
+      logs = logs.filter(log => allowedActions.includes(log.action));
+      
+      // Sanitize metadata to avoid exposing internal details like officer names or internal scores
+      logs = logs.map(log => {
+        const sanitizedLog = { ...log.toObject() };
+        // hide specific officer details
+        if (sanitizedLog.actorId && sanitizedLog.actorId.role === 'officer') {
+          sanitizedLog.actorId = { role: 'officer', name: 'Department Officer' };
+        }
+        return sanitizedLog;
+      });
+    }
+
+    return res.status(200).json({ success: true, logs });
   } catch (error) {
     return res.status(500).json({ success: false, message: error.message });
   }

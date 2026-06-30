@@ -10,6 +10,7 @@ import { requestAPI } from '../utils/api';
 import { useAccessibility } from '../context/AccessibilityContext';
 import { computeSlaStatus, queueComparator } from '../utils/slaEngine';
 import { io } from 'socket.io-client';
+import { NotificationCenter, useNotifications } from '../components/NotificationCenter';
 
 /* ─── Status helpers ─── */
 const statusBadge = (s) => {
@@ -64,8 +65,9 @@ export const OfficerDashboard = () => {
   /* Evidence override */
   const [evidenceSubmitting, setEvidenceSubmitting] = useState(false);
 
-  /* Urgent alert toast (T8) */
+  /* Urgent alert toast & notifications */
   const [urgentToast, setUrgentToast] = useState(null);
+  const { notifications, addNotification, clearAll, markRead } = useNotifications();
 
   /* ─── Auth guard ─── */
   useEffect(() => {
@@ -78,12 +80,18 @@ export const OfficerDashboard = () => {
     fetchRequests();
   }, [navigate]);
 
-  /* ─── Socket: urgentAlert (T8) ─── */
+  /* ─── Socket: urgentAlert ─── */
   useEffect(() => {
     const socketUrl = import.meta.env.VITE_SOCKET_URL || 'http://localhost:5000';
     const sock = io(socketUrl, { reconnection: true, reconnectionAttempts: 3 });
     sock.on('urgentAlert', (data) => {
       setUrgentToast(data);
+      addNotification({
+        title: data.isEmergency ? 'Critical Emergency' : 'Urgent Alert',
+        body: data.message,
+        type: data.isEmergency ? 'emergency' : (data.priority === 'Critical' ? 'critical' : 'escalation'),
+        time: data.time
+      });
       setTimeout(() => setUrgentToast(null), 8000);
       speak(data.message || 'Urgent alert received');
     });
@@ -93,7 +101,7 @@ export const OfficerDashboard = () => {
       }
     });
     return () => sock.close();
-  }, []);
+  }, [addNotification]);
 
   const fetchRequests = async (silent = false) => {
     if (!silent) setLoading(true); else setRefreshing(true);
@@ -293,13 +301,16 @@ export const OfficerDashboard = () => {
               </p>
             </div>
           </div>
-          <button
-            onClick={() => fetchRequests(true)}
-            className="btn-ghost text-xs px-4 py-2 flex items-center gap-2"
-          >
-            <RefreshCw className={`w-3.5 h-3.5 ${refreshing ? 'animate-spin' : ''}`} />
-            Refresh Queue
-          </button>
+          <div className="flex items-center gap-2">
+            <NotificationCenter notifications={notifications} onClear={clearAll} onMarkRead={markRead} />
+            <button
+              onClick={() => fetchRequests(true)}
+              className="btn-ghost text-xs px-4 py-2 flex items-center gap-2"
+            >
+              <RefreshCw className={`w-3.5 h-3.5 ${refreshing ? 'animate-spin' : ''}`} />
+              Refresh Queue
+            </button>
+          </div>
         </div>
       )}
 
@@ -411,14 +422,24 @@ export const OfficerDashboard = () => {
 
           {/* Table */}
           {loading && allRequests.length === 0 ? (
-            <div className="gov-card p-10 text-center text-xs text-gray-400">
-              <div className="w-6 h-6 border-2 border-blue-200 border-t-[#2563EB] rounded-full animate-spin mx-auto mb-2" />
-              Loading department registry…
+            <div className="space-y-3">
+              {[1, 2, 3].map(i => (
+                <div key={i} className="gov-card p-4 flex items-center justify-between animate-pulse">
+                  <div className="flex items-center gap-4">
+                    <div className="w-12 h-12 bg-gray-200 rounded-xl"></div>
+                    <div className="space-y-2">
+                      <div className="h-4 w-32 bg-gray-200 rounded"></div>
+                      <div className="h-3 w-24 bg-gray-100 rounded"></div>
+                    </div>
+                  </div>
+                  <div className="h-6 w-20 bg-gray-200 rounded-full"></div>
+                </div>
+              ))}
             </div>
           ) : filteredRequests.length === 0 ? (
             <div className="gov-card p-10 text-center text-sm text-gray-400 space-y-2">
               <FileText className="w-8 h-8 text-gray-200 mx-auto" />
-              <p>No tickets match the current filters.</p>
+              <p>No pending queue or suspicious evidence found.</p>
             </div>
           ) : (
             <div className="gov-card overflow-hidden">
@@ -600,7 +621,14 @@ export const OfficerDashboard = () => {
                         <div className="flex items-start justify-between gap-2">
                           <div className="flex items-center gap-1.5 font-semibold text-gray-800 truncate">
                             <Hash className="w-3 h-3 text-gray-400 flex-shrink-0" />
-                            <span className="truncate">{doc.name}</span>
+                            <a 
+                              href={doc.secureUrl || doc.path} 
+                              target="_blank" 
+                              rel="noreferrer"
+                              className="truncate text-blue-600 hover:underline flex items-center gap-1"
+                            >
+                              {doc.name}
+                            </a>
                           </div>
                           <div className="flex items-center gap-1.5 flex-shrink-0">
                             {doc.flagged ? (

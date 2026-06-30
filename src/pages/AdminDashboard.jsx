@@ -9,13 +9,18 @@ import { adminAPI, requestAPI } from '../utils/api';
 import { useAccessibility } from '../context/AccessibilityContext';
 import { computeSlaStatus } from '../utils/slaEngine';
 import { io } from 'socket.io-client';
+import { AnalyticsPanel } from '../components/AnalyticsPanel';
+import { DemoModePanel } from '../components/DemoModePanel';
+import { SystemHealthPanel } from '../components/SystemHealthPanel';
+import { NotificationCenter, useNotifications } from '../components/NotificationCenter';
+import { AuditPanel } from '../components/AuditPanel';
 
 export const AdminDashboard = () => {
   const navigate = useNavigate();
   const { speak } = useAccessibility();
 
   const [currentAdmin, setCurrentAdmin] = useState(null);
-  const [activeTab, setActiveTab] = useState('analytics'); // 'analytics' | 'officers' | 'services' | 'telemetry'
+  const [activeTab, setActiveTab] = useState('analytics'); // 'analytics' | 'officers' | 'services' | 'telemetry' | 'governance'
 
   // Data state
   const [metrics, setMetrics] = useState({ total: 5, pending: 3, inProgress: 1, completed: 1, approved: 0, rejected: 0 });
@@ -34,9 +39,9 @@ export const AdminDashboard = () => {
   const [formSuccess, setFormSuccess] = useState(false);
   const [submittingOfficer, setSubmittingOfficer] = useState(false);
 
-  // Urgent alert toast (T8)
+  // Urgent alert toast & notification center
   const [urgentToast, setUrgentToast] = useState(null);
-  const [urgentAlerts, setUrgentAlerts] = useState([]);
+  const { notifications, addNotification, clearAll, markRead } = useNotifications();
 
   // T3: Escalation trigger state
   const [escalationRunning, setEscalationRunning] = useState(false);
@@ -55,15 +60,46 @@ export const AdminDashboard = () => {
   });
 
   // Telemetry logs state
-  const [wsLogs, setWsLogs] = useState([
-    { id: 1, type: "info", time: new Date().toLocaleTimeString(), text: "[Socket.io] Admin connection established successfully." },
-    { id: 2, type: "success", time: new Date(Date.now() - 3000).toLocaleTimeString(), text: "[API Gateway] JWT verified for admin token." },
-    { id: 3, type: "warn", time: new Date(Date.now() - 10000).toLocaleTimeString(), text: "[Database] Auto-cleaned 4 old expired sessions." }
-  ]);
+  const [wsLogs, setWsLogs] = useState([]);
+  const [cpuLoad, setCpuLoad] = useState(0);
+  const [ramLoad, setRamLoad] = useState(0);
+  const [dbStatus, setDbStatus] = useState('CHECKING');
+  const [socketCount, setSocketCount] = useState(0);
 
-  // Telemetry hardware stats
-  const [cpuLoad, setCpuLoad] = useState(24);
-  const [ramLoad, setRamLoad] = useState(42);
+  // Phase 5: Governance & Audit State
+  const [auditLogs, setAuditLogs] = useState([]);
+  const [auditMetrics, setAuditMetrics] = useState({ mostEscalated: 0, rejectedEvidence: 0, emergencyFrequency: 0 });
+
+  // Poll Telemetry data when tab is active
+  useEffect(() => {
+    let interval;
+    if (activeTab === 'telemetry') {
+      const fetchTelemetry = async () => {
+        try {
+          // Fetch logs
+          const logRes = await adminAPI.getTelemetry();
+          if (logRes.data?.success) setWsLogs(logRes.data.logs);
+          
+          // Fetch health (requires full path if not in API route prefix)
+          // The base url is /api, we can fetch root /health
+          const healthRes = await fetch(`${import.meta.env.VITE_API_URL?.replace('/api', '') || 'http://localhost:5000'}/health`);
+          const healthData = await healthRes.json();
+          if (healthData.success) {
+            setCpuLoad(parseFloat(healthData.cpu));
+            setRamLoad(parseFloat(healthData.memory.heapUsed)); // using raw MB for visual demo
+            setDbStatus(healthData.dbStatus);
+            setSocketCount(healthData.socketsCount);
+          }
+        } catch (e) {
+          console.warn('Telemetry fetch failed', e);
+        }
+      };
+      
+      fetchTelemetry();
+      interval = setInterval(fetchTelemetry, 3000); // refresh every 3 seconds
+    }
+    return () => clearInterval(interval);
+  }, [activeTab]);
 
   // Verification checks on mount
   useEffect(() => {
@@ -89,11 +125,16 @@ export const AdminDashboard = () => {
     const sock = io(socketUrl, { reconnection: true, reconnectionAttempts: 3 });
     sock.on('urgentAlert', (data) => {
       setUrgentToast(data);
-      setUrgentAlerts(prev => [data, ...prev].slice(0, 20));
+      addNotification({
+        title: data.isEmergency ? 'Critical Emergency' : 'Urgent Alert',
+        body: data.message,
+        type: data.isEmergency ? 'emergency' : (data.priority === 'Critical' ? 'critical' : 'escalation'),
+        time: data.time
+      });
       setTimeout(() => setUrgentToast(null), 8000);
     });
     return () => sock.close();
-  }, []);
+  }, [addNotification]);
 
   const fetchAdminDashboard = async (silent = false) => {
     if (!silent) setLoading(true); else setRefreshing(true);
@@ -193,27 +234,23 @@ export const AdminDashboard = () => {
     ]);
   };
 
-  // Dynamic telemetry simulator
+  // Phase 5: Fetch Audit Data when Governance tab is active
   useEffect(() => {
-    if (activeTab !== 'telemetry') return;
-    const interval = setInterval(() => {
-      setCpuLoad(Math.floor(15 + Math.random() * 20));
-      setRamLoad(Math.floor(40 + Math.random() * 5));
-      
-      const events = [
-        "[Socket.io] Client socket disconnected (Kiosk Node-04).",
-        "[Database] Executed aggregation pipeline metrics fetch.",
-        "[API Gateway] Routed GET /api/admin/dashboard.",
-        "[Socket.io] New client session connected from +91 9876543210.",
-        "[Config dispatch] Synced service configuration registry."
-      ];
-      const selectedEvent = events[Math.floor(Math.random() * events.length)];
-      setWsLogs(prev => [
-        { id: Date.now(), type: "info", time: new Date().toLocaleTimeString(), text: selectedEvent },
-        ...prev.slice(0, 15) // Keep last 15 logs
-      ]);
-    }, 3000);
-    return () => clearInterval(interval);
+    if (activeTab === 'governance') {
+      const fetchAuditData = async () => {
+        try {
+          const [logsRes, metricsRes] = await Promise.all([
+            adminAPI.getAuditLogs(),
+            adminAPI.getAuditMetrics()
+          ]);
+          if (logsRes.data?.success) setAuditLogs(logsRes.data.logs);
+          if (metricsRes.data?.success) setAuditMetrics(metricsRes.data.metrics);
+        } catch (e) {
+          console.error('Failed to fetch audit data', e);
+        }
+      };
+      fetchAuditData();
+    }
   }, [activeTab]);
 
   return (
@@ -251,6 +288,7 @@ export const AdminDashboard = () => {
             </div>
           </div>
           <div className="flex items-center gap-2">
+            <NotificationCenter notifications={notifications} onClear={clearAll} onMarkRead={markRead} />
             <button
               onClick={() => { fetchAdminDashboard(true); fetchOfficers(); }}
               className="btn-ghost text-xs px-4 py-2 flex items-center gap-2"
@@ -271,7 +309,8 @@ export const AdminDashboard = () => {
             { id: 'analytics', label: 'Analytics & SLA', icon: <Activity className="w-4 h-4" /> },
             { id: 'officers', label: 'Officer Manager', icon: <Users className="w-4 h-4" /> },
             { id: 'services', label: 'Service Manager', icon: <Settings className="w-4 h-4" /> },
-            { id: 'telemetry', label: 'System Telemetry', icon: <Database className="w-4 h-4" /> }
+            { id: 'telemetry', label: 'System Telemetry', icon: <Database className="w-4 h-4" /> },
+            { id: 'governance', label: 'Governance & Audit', icon: <ShieldAlert className="w-4 h-4" /> }
           ].map(tab => (
             <button
               key={tab.id}
@@ -299,22 +338,15 @@ export const AdminDashboard = () => {
           ────────────────────────────── */}
           {activeTab === 'analytics' && (
             <div className="space-y-6 animate-fade-in">
-              
-              {/* Stats Grid */}
-              <div className="grid grid-cols-2 sm:grid-cols-5 gap-3">
-                {[
-                  { label: 'Total Tickets', value: metrics.total, color: 'text-gray-900 bg-gray-50 border-gray-200', icon: <BarChart2 className="w-4 h-4 text-gray-500" /> },
-                  { label: 'Pending Queue', value: metrics.pending, color: 'text-amber-700 bg-amber-50 border-amber-200', icon: <Clock className="w-4 h-4 text-amber-500" /> },
-                  { label: 'Active Work', value: metrics.inProgress, color: 'text-blue-700 bg-blue-50 border-blue-200', icon: <Activity className="w-4 h-4 text-[#2563EB]" /> },
-                  { label: 'Resolved Cases', value: metrics.completed, color: 'text-green-700 bg-green-50 border-green-200', icon: <CheckCircle2 className="w-4 h-4 text-green-500" /> },
-                  { label: 'SLA Overdue', value: slaViolations.length, color: slaViolations.length > 0 ? 'text-red-700 bg-red-50 border-red-200 animate-pulse' : 'text-gray-400 bg-gray-50 border-gray-200', icon: <AlertTriangle className="w-4 h-4 text-red-500" /> }
-                ].map(stat => (
-                  <div key={stat.label} className="gov-card p-4 text-center flex flex-col items-center justify-center gap-2">
-                    <div className="text-xl font-black text-gray-900" style={{ fontFamily: 'Outfit, sans-serif' }}>{stat.value}</div>
-                    <div className="text-[10px] text-gray-500 font-bold uppercase tracking-wider">{stat.label}</div>
-                  </div>
-                ))}
-              </div>
+              {/* T8: System Health Panel */}
+              <SystemHealthPanel />
+
+              {/* T4: Demo Mode Engine */}
+              <DemoModePanel onScenarioCreated={fetchAdminDashboard} />
+
+              {/* T3: Advanced Analytics Panel */}
+              <AnalyticsPanel />
+
 
               {/* T6: Immediate Attention Required Panel */}
               {(() => {
@@ -323,7 +355,7 @@ export const AdminDashboard = () => {
                   return slaStatus === 'Critical' || slaStatus === 'Escalated';
                 });
                 const escalated = slaViolations.filter(t => computeSlaStatus(t.createdAt).slaStatus === 'Escalated');
-                const emergencyCount = urgentAlerts.filter(a => a.isEmergency).length;
+                const emergencyCount = notifications.filter(a => a.type === 'emergency').length;
                 const criticalPriority = slaViolations.filter(t => t.priority === 'Critical').length;
                 const hasAlert = emergencyCount > 0 || critical.length > 0 || criticalPriority > 0;
                 if (!hasAlert) return null;
@@ -347,13 +379,13 @@ export const AdminDashboard = () => {
                         </div>
                       ))}
                     </div>
-                    {urgentAlerts.length > 0 && (
+                    {notifications.filter(a => a.type === 'emergency' || a.type === 'critical').length > 0 && (
                       <div className="mt-3 space-y-1.5 max-h-[120px] overflow-y-auto">
-                        {urgentAlerts.slice(0, 5).map((a, i) => (
+                        {notifications.filter(a => a.type === 'emergency' || a.type === 'critical').slice(0, 5).map((a, i) => (
                           <div key={i} className="flex items-center gap-2 text-[10px] text-red-700 bg-white border border-red-100 rounded-lg p-2">
                             <span>🚨</span>
-                            <span className="font-mono font-bold">{a.requestId}</span>
-                            <span className="flex-1 truncate">{a.message}</span>
+                            <span className="font-mono font-bold">{a.title}</span>
+                            <span className="flex-1 truncate">{a.body}</span>
                           </div>
                         ))}
                       </div>
@@ -397,39 +429,8 @@ export const AdminDashboard = () => {
               {/* Breakdown & SLA Splits */}
               <div className="grid grid-cols-1 md:grid-cols-5 gap-5">
                 
-                {/* Custom CSS Bar Chart (2 cols) */}
-                <div className="md:col-span-2 gov-card p-5 space-y-4">
-                  <h4 className="section-label text-gray-700 border-b border-gray-100 pb-2">Category Distribution</h4>
-                  
-                  <div className="space-y-4 text-xs">
-                    {[
-                      { type: 'electricity', label: 'Electricity Connection', color: 'bg-[#2563EB]' },
-                      { type: 'water', label: 'Water Supply Systems', color: 'bg-cyan-600' },
-                      { type: 'gas', label: 'PNG Gas Infrastructure', color: 'bg-orange-500' },
-                      { type: 'waste', label: 'Solid Waste Operations', color: 'bg-green-600' },
-                      { type: 'general', label: 'General Civic Redressals', color: 'bg-purple-600' }
-                    ].map(item => {
-                      const countObj = serviceBreakdown.find(s => s._id === item.type);
-                      const count = countObj ? countObj.count : 0;
-                      const percentage = metrics.total > 0 ? ((count / metrics.total) * 100).toFixed(0) : 0;
-
-                      return (
-                        <div key={item.type} className="space-y-1.5">
-                          <div className="flex justify-between items-center font-bold">
-                            <span className="text-gray-700">{item.label}</span>
-                            <span className="text-gray-900">{count} ({percentage}%)</span>
-                          </div>
-                          <div className="w-full bg-gray-100 h-2 rounded-full overflow-hidden">
-                            <div className={`${item.color} h-full rounded-full transition-all duration-500`} style={{ width: `${percentage}%` }} />
-                          </div>
-                        </div>
-                      );
-                    })}
-                  </div>
-                </div>
-
-                {/* SLA Violations Queue with tier badges (3 cols) */}
-                <div className="md:col-span-3 gov-card p-5 space-y-4">
+                {/* SLA Violations Queue with tier badges (Full width) */}
+                <div className="md:col-span-5 gov-card p-5 space-y-4">
                   <div className="flex justify-between items-center pb-2 border-b border-gray-100">
                     <h4 className="section-label text-gray-700">SLA Intelligence Monitor</h4>
                     <span className="status-badge badge-critical">Immediate Action</span>
@@ -439,7 +440,7 @@ export const AdminDashboard = () => {
                     <div className="py-14 text-center text-xs text-gray-400 space-y-2">
                       <CheckCircle2 className="w-8 h-8 text-green-500 mx-auto" />
                       <p className="font-bold text-gray-700">All connections within SLA limits</p>
-                      <p className="text-[10px]">No active complaints exceed the 24h warning threshold.</p>
+                      <p className="text-[10px]">No alerts or escalations found.</p>
                     </div>
                   ) : (
                     <div className="space-y-2 max-h-[260px] overflow-y-auto pr-1">
@@ -494,28 +495,7 @@ export const AdminDashboard = () => {
 
               </div>
 
-              {/* T5: Persistent Urgent Events Log */}
-              {urgentAlerts.length > 0 && (
-                <div className="gov-card p-5 space-y-3">
-                  <div className="flex items-center justify-between pb-2 border-b border-gray-100">
-                    <h4 className="section-label text-gray-700 flex items-center gap-2"><span>📡</span> Urgent Events Log</h4>
-                    <span className="text-[10px] text-gray-400 font-bold">{urgentAlerts.length} event{urgentAlerts.length !== 1 ? `"s`" : `"`"} this session</span>
-                  </div>
-                  <div className="space-y-2 max-h-[200px] overflow-y-auto pr-1">
-                    {urgentAlerts.map((alert, i) => (
-                      <div key={i} className="flex items-start gap-2.5 p-2.5 bg-gray-50 border border-gray-100 rounded-xl text-[10px]">
-                        <span className="flex-shrink-0 text-sm">{alert.isEmergency ? `"🚨`" : `"⚡`"}</span>
-                        <div className="flex-1 min-w-0">
-                          <span className="font-mono font-bold text-[#2563EB] block">{alert.requestId}</span>
-                          <span className="text-gray-600 block mt-0.5 leading-relaxed">{alert.message}</span>
-                          <span className="text-gray-400 block mt-0.5">{alert.time ? new Date(alert.time).toLocaleString(`"en-IN`") : `"Just now`"}</span>
-                        </div>
-                        <span className={`text-[9px] font-black px-1.5 py-0.5 rounded-full flex-shrink-0 ${alert.isEmergency ? `"bg-red-100 text-red-700`" : `"bg-orange-100 text-orange-700`"}`}>{alert.isEmergency ? `"EMERGENCY`" : `"CRITICAL`"}</span>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              )}
+
 
             </div>
           )}
@@ -723,8 +703,8 @@ export const AdminDashboard = () => {
                   </div>
 
                   <div className="p-3.5 bg-blue-50 border border-blue-100 rounded-xl space-y-2 text-[10px] text-gray-500 font-semibold leading-relaxed">
-                    <div className="flex justify-between">Database connection: <span className="text-[#16A34A] font-bold">MONGODB CONNECTED</span></div>
-                    <div className="flex justify-between">WS Socket tunnels: <span className="text-gray-900 font-bold">2 terminals active</span></div>
+                    <div className="flex justify-between">Database connection: <span className={dbStatus === 'CONNECTED' ? 'text-[#16A34A] font-bold' : 'text-red-500 font-bold'}>{dbStatus}</span></div>
+                    <div className="flex justify-between">WS Socket tunnels: <span className="text-gray-900 font-bold">{socketCount} terminals active</span></div>
                     <div className="flex justify-between">Auto SLA validator daemon: <span className="text-green-600 font-bold">RUNNING</span></div>
                   </div>
                 </div>
@@ -756,6 +736,13 @@ export const AdminDashboard = () => {
               </div>
 
             </div>
+          )}
+
+          {/* ──────────────────────────────
+              TAB 5: GOVERNANCE & AUDIT
+          ────────────────────────────── */}
+          {activeTab === 'governance' && (
+            <AuditPanel />
           )}
 
         </div>

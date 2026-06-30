@@ -9,6 +9,7 @@ import {
 import { requestAPI, uploadAPI } from '../utils/api';
 import { useAccessibility } from '../context/AccessibilityContext';
 import { io } from 'socket.io-client';
+import { NotificationCenter, useNotifications } from '../components/NotificationCenter';
 
 /* ─── Status helpers ─── */
 const statusBadge = (status) => {
@@ -72,8 +73,9 @@ export const CitizenDashboard = () => {
   const [emergencySubmitting, setEmergencySubmitting] = useState(false);
   const [emergencySuccess, setEmergencySuccess]   = useState(null);
 
-  /* Urgent alert toast */
-  const [urgentToast, setUrgentToast]     = useState(null);
+  /* Urgent alert toast & notifications */
+  const [urgentToast, setUrgentToast] = useState(null);
+  const { notifications, addNotification, clearAll, markRead } = useNotifications();
 
   /* Vault state */
   const [vaultDocs, setVaultDocs] = useState([
@@ -96,16 +98,26 @@ export const CitizenDashboard = () => {
     fetchMyRequests();
   }, [navigate]);
 
-  /* ─── Socket: listen for urgentAlert (T8) ─── */
+  /* ─── Socket: listen for urgentAlert ─── */
   useEffect(() => {
     const socketUrl = import.meta.env.VITE_SOCKET_URL || 'http://localhost:5000';
     const sock = io(socketUrl, { reconnection: true, reconnectionAttempts: 3 });
+    
     sock.on('urgentAlert', (data) => {
+      // Only show to citizen if it's their own emergency / notification, but we can't filter here easily without user ID matching
+      // We will show it as an alert, but ideally this is filtered by room.
       setUrgentToast(data);
+      addNotification({
+        title: data.isEmergency ? 'Emergency Update' : 'System Alert',
+        body: data.message,
+        type: data.isEmergency ? 'emergency' : 'status',
+        time: data.time
+      });
       setTimeout(() => setUrgentToast(null), 6000);
     });
+
     return () => sock.close();
-  }, []);
+  }, [addNotification]);
 
   const fetchMyRequests = async (silent = false) => {
     if (!silent) setLoading(true); else setRefreshing(true);
@@ -373,6 +385,9 @@ export const CitizenDashboard = () => {
             </div>
           </div>
           <div className="flex items-center gap-3 flex-shrink-0">
+            <div className="text-gray-900">
+              <NotificationCenter notifications={notifications} onClear={clearAll} onMarkRead={markRead} />
+            </div>
             <button
               onClick={() => fetchMyRequests(true)}
               className="p-2 rounded-xl bg-white/10 hover:bg-white/20 border border-white/20 transition text-white"
@@ -487,7 +502,7 @@ export const CitizenDashboard = () => {
               ) : filteredRequests.length === 0 ? (
                 <div className="gov-card p-8 text-center text-xs text-gray-400 space-y-2">
                   <FileText className="w-8 h-8 text-gray-200 mx-auto" />
-                  <p className="font-medium">No requests found.</p>
+                  <p className="font-medium">No complaints filed.</p>
                   <button onClick={() => setActiveTab('apply')} className="text-[#2563EB] font-bold hover:underline">
                     + Apply for a service
                   </button>

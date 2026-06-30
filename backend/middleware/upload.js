@@ -1,13 +1,7 @@
 import multer from 'multer';
 import path from 'path';
-import fs from 'fs';
-
-const uploadDir = './uploads';
-
-// Verify local uploads folder exists
-if (!fs.existsSync(uploadDir)) {
-  fs.mkdirSync(uploadDir, { recursive: true });
-}
+import { CloudinaryStorage } from 'multer-storage-cloudinary';
+import cloudinary from '../config/cloudinary.js';
 
 // Allowed MIME types (exact match — no regex partial match)
 const ALLOWED_MIME_TYPES = [
@@ -18,20 +12,36 @@ const ALLOWED_MIME_TYPES = [
 ];
 const ALLOWED_EXTENSIONS = ['.jpg', '.jpeg', '.png', '.pdf'];
 
-const storage = multer.diskStorage({
-  destination: function (req, file, cb) {
-    cb(null, uploadDir);
-  },
-  filename: function (req, file, cb) {
+// Primary Storage: Cloudinary
+const cloudStorage = new CloudinaryStorage({
+  cloudinary: cloudinary,
+  params: async (req, file) => {
+    // Determine folder and resource_type based on mime
+    let folder = 'suvidha/images';
+    let resource_type = 'image';
+    if (file.mimetype === 'application/pdf') {
+      folder = 'suvidha/documents';
+      resource_type = 'raw'; // PDF requires raw in Cloudinary
+    }
+
     const uniqueSuffix = `${Date.now()}-${Math.round(Math.random() * 1e9)}`;
     const ext = path.extname(file.originalname).toLowerCase();
-    // Sanitize original name: keep only alphanumeric and hyphens
-    const safeName = path.basename(file.originalname, ext)
-      .replace(/[^a-zA-Z0-9_-]/g, '_')
-      .substring(0, 60); // cap length
-    cb(null, `${safeName}-${uniqueSuffix}${ext}`);
-  }
+    const safeName = path.basename(file.originalname, ext).replace(/[^a-zA-Z0-9_-]/g, '_').substring(0, 60);
+
+    return {
+      folder,
+      resource_type,
+      public_id: `${safeName}-${uniqueSuffix}`,
+    };
+  },
 });
+
+// Enforce Enterprise Cloud Storage (Phase 3 Upgrade)
+if (!process.env.CLOUDINARY_CLOUD_NAME || !process.env.CLOUDINARY_API_KEY || !process.env.CLOUDINARY_API_SECRET) {
+  console.warn("⚠️  WARNING: Cloudinary credentials missing in .env. Uploads will fail.");
+}
+
+const storage = cloudStorage;
 
 // T5: MIME-to-extension cross-validation table — prevents spoofed extensions
 // e.g. a JPEG renamed as .pdf would have mimetype=image/jpeg but ext=.pdf → REJECTED

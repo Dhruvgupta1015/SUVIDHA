@@ -103,11 +103,12 @@
     border: 1px solid var(--color-border);
     border-radius: 14px;
     box-shadow: 0 1px 4px rgba(15,23,42,0.05), 0 1px 2px rgba(15,23,42,0.03);
-    transition: box-shadow 0.25s ease, border-color 0.25s ease, transform 0.2s ease;
+    transition: all 300ms ease;
   }
   .gov-card:hover {
-    box-shadow: 0 6px 20px rgba(15,23,42,0.08), 0 2px 6px rgba(15,23,42,0.04);
+    box-shadow: 0 10px 25px rgba(15,23,42,0.1), 0 4px 10px rgba(15,23,42,0.05);
     border-color: var(--color-border-dark);
+    transform: translateY(-2px) scale(1.01);
   }
 
   /* Primary button — Blue */
@@ -124,13 +125,14 @@
     border-radius: 8px;
     border: none;
     cursor: pointer;
-    transition: background 0.15s ease, transform 0.1s ease, box-shadow 0.15s ease;
+    transition: all 300ms ease;
     box-shadow: 0 1px 3px rgba(37,99,235,0.25);
     user-select: none;
   }
   .btn-primary:hover {
     background: var(--color-primary-dark);
-    box-shadow: 0 4px 14px rgba(37,99,235,0.3);
+    box-shadow: 0 8px 20px rgba(37,99,235,0.3);
+    transform: scale(1.02);
   }
   .btn-primary:active { transform: scale(0.98); }
   .btn-primary:disabled { opacity: 0.55; cursor: not-allowed; }
@@ -149,12 +151,13 @@
     border-radius: 8px;
     border: 1.5px solid var(--color-primary);
     cursor: pointer;
-    transition: background 0.15s ease, color 0.15s ease;
+    transition: all 300ms ease;
     user-select: none;
   }
   .btn-outline:hover {
     background: #EFF6FF;
     border-color: var(--color-primary-dark);
+    transform: scale(1.02);
   }
   .btn-outline:active { transform: scale(0.98); }
 
@@ -189,7 +192,6 @@
   .badge-critical  { background: #FEE2E2; color: #7F1D1D; border: 1px solid #FECACA; }
   .badge-high      { background: #FEF3C7; color: #92400E; border: 1px solid #FDE68A; }
   .badge-standard  { background: #F3F4F6; color: #374151; border: 1px solid #E5E7EB; }
-
   .status-badge {
     display: inline-flex;
     align-items: center;
@@ -199,6 +201,11 @@
     font-weight: 700;
     text-transform: uppercase;
     letter-spacing: 0.05em;
+    transition: all 300ms ease;
+  }
+  .status-badge:hover {
+    filter: brightness(0.95);
+    transform: scale(1.02);
   }
 
   /* Input field */

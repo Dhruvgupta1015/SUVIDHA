@@ -1,12 +1,18 @@
 import jwt from 'jsonwebtoken';
 import User from '../models/User.js';
-
-// Simple in-memory storage for active OTP codes
-const activeOtps = new Map();
+import { getRedis } from '../config/redis.js';
+import { sendOTP } from '../services/smsService.js';
+import logger from '../utils/logger.js';
+import * as Sentry from '@sentry/node';
 
 // Helper to sign JWT tokens — 8-hour expiry aligns with a full working session
 const generateToken = (payload) => {
-  return jwt.sign(payload, process.env.JWT_SECRET || 'suvidha_secret', {
+  const secret = process.env.JWT_SECRET;
+  if (!secret) {
+    if (process.env.NODE_ENV === 'production') throw new Error('FATAL ERROR: JWT_SECRET is not defined in production');
+    logger.warn('JWT_SECRET missing, using insecure fallback');
+  }
+  return jwt.sign(payload, secret || 'suvidha_secret', {
     expiresIn: '8h'
   });
 };
@@ -24,16 +30,34 @@ export const requestOtp = async (req, res) => {
       return res.status(400).json({ success: false, message: 'Please provide a valid 10-digit mobile number' });
     }
 
-    // Generate a simulated OTP (always accept '123456' as fallback, but generate random)
+    const redis = getRedis();
+    const rateKey = `rate_limit:${mobile}`;
+    const otpKey = `otp:${mobile}`;
+    const attemptKey = `attempts:${mobile}`;
+
+    // Rate Limiting: Max 3 requests per hour
+    const requests = await redis.incr(rateKey);
+    if (requests > 3) {
+      return res.status(429).json({ success: false, message: 'Too many OTP requests. Please try again after an hour.' });
+    }
+
+    // Generate 6-digit secure OTP
     const generatedOtp = Math.floor(100000 + Math.random() * 900000).toString();
-    activeOtps.set(mobile, generatedOtp);
+    
+    // Store OTP and attempts in Redis (5-minute expiry)
+    await redis.setEx(otpKey, 300, generatedOtp);
+    await redis.setEx(attemptKey, 300, 0);
+
+    // Dispatch SMS via provider (Twilio or mock fallback)
+    await sendOTP(mobile, generatedOtp);
 
     return res.status(200).json({
       success: true,
-      message: 'OTP generated and sent successfully (SMS Simulated)',
-      demoOtp: generatedOtp
+      message: 'OTP generated and sent via SMS',
+      demoOtp: generatedOtp // Kept for hackathon fallback purposes
     });
   } catch (error) {
+    Sentry.captureException(error);
     return res.status(500).json({ success: false, message: error.message });
   }
 };
@@ -51,17 +75,40 @@ export const verifyOtp = async (req, res) => {
       return res.status(400).json({ success: false, message: 'Mobile and OTP fields are mandatory' });
     }
 
-    const savedOtp = activeOtps.get(mobile);
+    const redis = getRedis();
+    const otpKey = `otp:${mobile}`;
+    const attemptKey = `attempts:${mobile}`;
+
+    const savedOtp = await redis.get(otpKey);
 
     // '123456' is a permanent demo passkey for hackathon stability.
-    // Render free tier clears in-memory OTPs on sleep/restart, so we cannot
-    // rely solely on savedOtp. Real OTP is still accepted when it exists.
-    if (otp !== savedOtp && otp !== '123456') {
-      return res.status(400).json({ success: false, message: 'Invalid OTP code. Please retry.' });
+    if (otp !== '123456') {
+      if (!savedOtp) {
+        return res.status(400).json({ success: false, message: 'OTP expired or not requested. Please request a new one.' });
+      }
+
+      // Max 3 retries brute force protection
+      const attempts = await redis.incr(attemptKey);
+      if (attempts > 3) {
+        await redis.del(otpKey); // Invalidate OTP completely
+        logger.warn(`[Auth] Brute force OTP attempt blocked for mobile: ${mobile}`);
+        req.app.get('io').emit('urgentAlert', {
+          message: `Suspicious activity: Repeated failed OTP attempts for ${mobile}.`,
+          priority: 'High',
+          time: new Date().toLocaleTimeString()
+        });
+        Sentry.captureMessage(`Repeated failed OTP attempts for ${mobile}`, 'warning');
+        return res.status(429).json({ success: false, message: 'Max verification attempts exceeded. Please request a new OTP.' });
+      }
+
+      if (otp !== savedOtp) {
+        return res.status(400).json({ success: false, message: `Invalid OTP code. ${3 - attempts} attempts remaining.` });
+      }
     }
 
-    // Remove OTP from cache after use
-    activeOtps.delete(mobile);
+    // Clean up cache upon success
+    await redis.del(otpKey);
+    await redis.del(attemptKey);
 
     // Check if user exists in database
     let user = await User.findOne({ mobile });
@@ -101,6 +148,7 @@ export const verifyOtp = async (req, res) => {
       }
     });
   } catch (error) {
+    Sentry.captureException(error);
     return res.status(500).json({ success: false, message: error.message });
   }
 };
@@ -138,6 +186,15 @@ export const staffLogin = async (req, res) => {
 
     // Password check
     if (passwordClean !== user.password) {
+      logger.warn(`[Auth] Failed staff login attempt for: ${emailClean}`);
+      if (user.role === 'admin') {
+        req.app.get('io').emit('urgentAlert', {
+          message: `Suspicious activity: Failed login attempt on Admin account ${emailClean}.`,
+          priority: 'High',
+          time: new Date().toLocaleTimeString()
+        });
+      }
+      Sentry.captureMessage(`Failed staff login attempt for: ${emailClean}`, 'warning');
       return res.status(401).json({
         success: false,
         message: 'Invalid email or password'
@@ -165,6 +222,7 @@ export const staffLogin = async (req, res) => {
     });
 
   } catch (error) {
+    Sentry.captureException(error);
     return res.status(500).json({
       success: false,
       message: error.message

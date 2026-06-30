@@ -658,6 +658,27 @@ export const Home = () => {
             </button>
           </div>
         </div>
+
+        {/* T7: Judge Demo Credentials */}
+        <div className="mt-6 p-5 border-2 border-dashed border-blue-300 bg-blue-50 rounded-xl animate-fade-in">
+          <h4 className="font-bold text-[#0F172A] text-sm flex items-center gap-2 mb-3">
+            <ShieldCheck className="w-4 h-4 text-blue-600" /> Hackathon Judge Demo Credentials
+          </h4>
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+            <div className="p-3 bg-white rounded-lg border border-blue-100 shadow-sm transition-all duration-300 hover:shadow-xl hover:scale-[1.02]">
+              <span className="text-[10px] font-bold text-gray-400 uppercase">Citizen</span>
+              <div className="text-xs font-mono font-bold text-gray-800 mt-1">9876543210 (OTP: 123456)</div>
+            </div>
+            <div className="p-3 bg-white rounded-lg border border-blue-100 shadow-sm transition-all duration-300 hover:shadow-xl hover:scale-[1.02]">
+              <span className="text-[10px] font-bold text-gray-400 uppercase">Officer (Electricity)</span>
+              <div className="text-xs font-mono font-bold text-gray-800 mt-1">officer.elec@suvidha.gov.in <br/> Pass: officer123</div>
+            </div>
+            <div className="p-3 bg-white rounded-lg border border-blue-100 shadow-sm transition-all duration-300 hover:shadow-xl hover:scale-[1.02]">
+              <span className="text-[10px] font-bold text-gray-400 uppercase">Super Admin</span>
+              <div className="text-xs font-mono font-bold text-gray-800 mt-1">admin@suvidha.gov.in <br/> Pass: admin123</div>
+            </div>
+          </div>
+        </div>
       </section>
 
       {/* ══════════════════════════════════════

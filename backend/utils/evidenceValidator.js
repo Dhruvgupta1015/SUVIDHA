@@ -170,7 +170,10 @@ export function validateAndScoreDocuments(documents, serviceType, description) {
 
     scoredDocs.push({
       name:       doc.name,
-      path:       doc.path,
+      secureUrl:  doc.secureUrl || doc.path,
+      publicId:   doc.publicId || doc.name,
+      mimeType:   doc.mimeType,
+      size:       doc.size,
       verified:   !flagged,
       confidence,
       flagged,

@@ -9,6 +9,7 @@ import {
 import { requestAPI, uploadAPI } from '../utils/api';
 import { io } from 'socket.io-client';
 import { computeSlaStatus } from '../utils/slaEngine';
+import { ComplaintTimeline } from '../components/ComplaintTimeline';
 
 const statusBadge = (s) => {
   const m = { Completed: 'badge-complete', 'In-Progress': 'badge-progress', Rejected: 'badge-rejected', Pending: 'badge-pending', Approved: 'badge-approved' };
@@ -109,6 +110,21 @@ export const ComplaintTracking = () => {
     loadTicketDetails(searchId.trim());
   };
 
+  const [downloadingReceipt, setDownloadingReceipt] = useState(false);
+  const handleDownloadReceipt = async () => {
+    if (!ticketDetails) return;
+    setDownloadingReceipt(true);
+    try {
+      const url = await requestAPI.getReceiptUrl(ticketDetails.requestId);
+      window.open(url, '_blank');
+      speak('Receipt download started');
+    } catch (e) {
+      setErrorMsg('Failed to generate receipt. Please try again later.');
+    } finally {
+      setDownloadingReceipt(false);
+    }
+  };
+
   const getStepIndex = (status) => {
     const map = {
       'Pending': 1,
@@ -148,7 +164,10 @@ export const ComplaintTracking = () => {
       const reuploadRes = await requestAPI.reuploadeEvidence(ticketDetails.requestId, {
         docIndex: reuploadIndex,
         name: uploadRes.data.file.name,
-        path: uploadRes.data.file.path
+        secureUrl: uploadRes.data.file.secureUrl,
+        publicId: uploadRes.data.file.publicId,
+        mimeType: uploadRes.data.file.mimeType,
+        size: uploadRes.data.file.size
       });
 
       if (reuploadRes.data?.success) {
@@ -314,7 +333,7 @@ export const ComplaintTracking = () => {
           {/* Description details */}
           <div className="space-y-1.5 text-xs">
             <span className="section-label text-gray-500 block">Description Details</span>
-            <p className="p-3.5 bg-gray-50 rounded-xl text-gray-600 leading-relaxed border border-gray-100 italic">
+            <p className="p-3.5 bg-gray-50 rounded-xl text-gray-600 leading-relaxed border border-gray-100 italic break-words">
               "{ticketDetails.description}"
             </p>
           </div>
@@ -331,7 +350,32 @@ export const ComplaintTracking = () => {
                   const needsReupload = doc.flagged || doc.reason?.includes('Re-upload requested');
                   return (
                     <div key={i} className={`p-3 rounded-xl border ${st.color}`}>
-                      <div className="flex items-center justify-between gap-2">
+                        <a 
+                          href={doc.secureUrl || '#'} 
+                          target="_blank" 
+                          rel="noreferrer"
+                          className="block w-full h-32 mb-3 rounded-lg overflow-hidden relative group"
+                        >
+                          {doc.secureUrl && doc.secureUrl.match(/\.(jpeg|jpg|gif|png)$/i) ? (
+                            <img 
+                              src={doc.secureUrl} 
+                              alt={doc.name} 
+                              className="w-full h-full object-cover transition-transform group-hover:scale-105"
+                            />
+                          ) : doc.mimeType === 'application/pdf' || (doc.secureUrl && doc.secureUrl.endsWith('.pdf')) ? (
+                            <div className="w-full h-full flex items-center justify-center bg-gray-50 text-red-500 transition-colors group-hover:bg-gray-100">
+                              <FileText size={48} />
+                            </div>
+                          ) : (
+                            <div className="w-full h-full flex items-center justify-center bg-gray-50 text-gray-400 transition-colors group-hover:bg-gray-100">
+                              <Camera size={48} />
+                            </div>
+                          )}
+                          <div className="absolute inset-0 bg-black bg-opacity-0 group-hover:bg-opacity-10 transition-all flex items-center justify-center">
+                            <span className="opacity-0 group-hover:opacity-100 text-white font-bold drop-shadow-md text-sm">View Evidence</span>
+                          </div>
+                        </a>
+                        <div className="flex items-center justify-between gap-2">
                         <div className="flex items-center gap-1.5 font-semibold truncate">
                           <Hash className="w-3 h-3 opacity-50 flex-shrink-0" />
                           <span className="truncate">{doc.name}</span>
@@ -371,77 +415,19 @@ export const ComplaintTracking = () => {
             </div>
           )}
 
-          {/* Vertical Timelines */}
-          <div className="space-y-4 pt-1 text-xs">
-            <span className="section-label text-gray-500 block">Application Status Timeline</span>
+          {/* T5: Enhanced Complaint Timeline */}
+          <ComplaintTimeline ticketDetails={ticketDetails} />
 
-            <div className="relative border-l border-gray-200 ml-2 pl-5 space-y-6 text-xs">
-
-              {/* Step 1: Submitted */}
-              <div className="relative flex gap-3">
-                <span className="absolute -left-[26px] top-0.5 w-3 h-3 rounded-full bg-green-500 border-2 border-white"></span>
-                <div>
-                  <h5 className="font-bold text-gray-800">Request Registered</h5>
-                  <p className="text-[10px] text-gray-500 mt-0.5">Ticket submitted to the {ticketDetails.assignedDepartment} registry.</p>
-                </div>
-              </div>
-
-              {/* Step 2: Under Review */}
-              <div className="relative flex gap-3">
-                <span className={`absolute -left-[26px] top-0.5 w-3 h-3 rounded-full border-2 border-white ${
-                  getStepIndex(ticketDetails.status) >= 2 ? 'bg-green-500' : 'bg-gray-300'
-                }`}></span>
-                <div>
-                  <h5 className="font-bold text-gray-800">Department Processing Wing</h5>
-                  <p className="text-[10px] text-gray-500 mt-0.5">{ticketDetails.assignedDepartment}</p>
-                </div>
-              </div>
-
-              {/* Step 3: Team Assigned */}
-              <div className="relative flex gap-3">
-                <span className={`absolute -left-[26px] top-0.5 w-3 h-3 rounded-full border-2 border-white ${
-                  ticketDetails.assignedTeam && ticketDetails.assignedTeam !== 'Unassigned' ? 'bg-green-500' : 'bg-gray-300'
-                }`}></span>
-                <div>
-                  <h5 className="font-bold text-gray-800">Field Maintenance Crew Dispatch</h5>
-                  <p className="text-[10px] text-gray-500 font-semibold mt-0.5">
-                    {ticketDetails.assignedTeam && ticketDetails.assignedTeam !== 'Unassigned'
-                      ? `Crew Assigned: ${ticketDetails.assignedTeam}`
-                      : 'Under dispatch allocation review'
-                    }
-                  </p>
-                </div>
-              </div>
-
-              {/* Step 4: Remarks */}
-              {ticketDetails.remarks && (
-                <div className="relative flex gap-3">
-                  <span className="absolute -left-[26px] top-0.5 w-3 h-3 rounded-full bg-green-500 border-2 border-white"></span>
-                  <div className="p-3 bg-blue-50 border border-blue-100 rounded-xl w-full">
-                    <h5 className="font-bold text-[#2563EB]">Official Status Remarks</h5>
-                    <p className="text-[10px] text-gray-700 font-bold mt-0.5">"{ticketDetails.remarks}"</p>
-                  </div>
-                </div>
-              )}
-
-              {/* Step 5: Resolution */}
-              <div className="relative flex gap-3">
-                <span className={`absolute -left-[26px] top-0.5 w-3 h-3 rounded-full border-2 border-white ${
-                  ticketDetails.status === 'Completed' ? 'bg-green-500' :
-                  ticketDetails.status === 'Rejected' ? 'bg-red-500' : 'bg-gray-300'
-                }`}></span>
-                <div>
-                  <h5 className="font-bold text-gray-800">Resolution & Closure</h5>
-                  <p className="text-[10px] text-gray-500 mt-0.5">
-                    {ticketDetails.status === 'Completed' ? 'Grievance resolved and connection ticket closed.' :
-                     ticketDetails.status === 'Rejected' ? 'Ticket rejected / closed.' :
-                     'Pending final resolution logs'
-                    }
-                  </p>
-                </div>
-              </div>
-
-            </div>
+          {/* T1: Download Receipt Button */}
+          <div className="pt-4 border-t border-gray-150 flex justify-end">
+            <button
+              onClick={handleDownloadReceipt}
+              disabled={downloadingReceipt}
+              className="btn-secondary px-5 py-2.5 flex items-center gap-2"
+            >
+              <Printer className="w-4 h-4" />
+              {downloadingReceipt ? 'Generating PDF...' : 'Download Official Receipt'}
+            </button>
           </div>
 
         </div>

@@ -113,6 +113,14 @@ export const requestAPI = {
   // Citizen re-upload for flagged / requested document
   reuploadeEvidence: async (requestId, payload) => {
     return await API.put(`/requests/${requestId}/reupload`, payload);
+  },
+
+  // T1: PDF Receipt download URL (opened in new tab)
+  getReceiptUrl: (requestId) => `${BASE_URL}/requests/${requestId}/receipt`,
+
+  // Phase 5: Get audit logs for a specific request
+  getComplaintAuditLogs: async (requestId) => {
+    return await API.get(`/requests/${requestId}/audit-logs`);
   }
 };
 
@@ -145,6 +153,34 @@ export const adminAPI = {
 
   deleteOfficer: async (id) => {
     return await API.delete(`/admin/officers/${id}`);
+  },
+
+  // T3: Advanced analytics
+  getAnalytics: async () => {
+    return await API.get('/admin/analytics');
+  },
+
+  // T8: System health
+  getHealth: async () => {
+    return await API.get('/admin/health');
+  },
+
+  // T4: Demo seed
+  seedDemo: async (scenario) => {
+    return await API.post('/admin/demo-seed', { scenario });
+  },
+
+  // Phase 4: Telemetry Logs
+  getTelemetry: async () => {
+    return await API.get('/admin/telemetry');
+  },
+
+  // Phase 5: Governance Audit
+  getAuditLogs: async () => {
+    return await API.get('/admin/audit-logs');
+  },
+  getAuditMetrics: async () => {
+    return await API.get('/admin/audit-metrics');
   }
 };
 

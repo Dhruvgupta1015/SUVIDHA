@@ -6,7 +6,11 @@ export const protect = (req, res, next) => {
   if (req.headers.authorization && req.headers.authorization.startsWith('Bearer')) {
     try {
       token = req.headers.authorization.split(' ')[1];
-      const decoded = jwt.verify(token, process.env.JWT_SECRET || 'suvidha_secret');
+      const secret = process.env.JWT_SECRET;
+      if (!secret && process.env.NODE_ENV === 'production') {
+        throw new Error('FATAL ERROR: JWT_SECRET is not defined in production');
+      }
+      const decoded = jwt.verify(token, secret || 'suvidha_secret');
       
       req.user = decoded; // Attach user payload (id, role, etc) to req
       next();

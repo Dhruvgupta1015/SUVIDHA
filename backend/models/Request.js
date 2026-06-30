@@ -117,7 +117,11 @@ const requestSchema = new mongoose.Schema({
   documents: [
     {
       name:        { type: String, required: true },
-      path:        { type: String, required: true },
+      secureUrl:   { type: String, required: true },
+      publicId:    { type: String, required: true },
+      mimeType:    { type: String },
+      size:        { type: Number },
+      uploadedAt:  { type: Date, default: Date.now },
       verified:    { type: Boolean, default: false },
       confidence:  { type: Number,  default: 1.0 },
       flagged:     { type: Boolean, default: false },   // true if confidence < 0.50
@@ -129,6 +133,11 @@ const requestSchema = new mongoose.Schema({
 }, {
   timestamps: true
 });
+
+// Performance Indexes (Layer 13)
+requestSchema.index({ citizenId: 1 });
+requestSchema.index({ assignedDepartment: 1, status: 1 });
+requestSchema.index({ createdAt: -1 });
 
 export const Request = mongoose.model('Request', requestSchema);
 export default Request;
