@@ -28,7 +28,7 @@ router.post('/docs', protect, upload.single('file'), (req, res) => {
       }
     });
   } catch (error) {
-    Sentry.captureException(error);
+    if (process.env.SENTRY_DSN) Sentry.captureException(error);
     return res.status(500).json({ success: false, message: error.message });
   }
 }, handleUploadError); // catches multer errors (size limit, bad MIME type)

@@ -20,7 +20,6 @@ import connectDB from './config/db.js';
 import { initRedis, createRedisClient, getRedis } from './config/redis.js';
 import { initCloudinary } from './config/cloudinary.js';
 import { initSMS } from './services/smsService.js';
-import { createAdapter } from '@socket.io/redis-adapter';
 
 // Route Imports
 import authRoutes from './routes/authRoutes.js';
@@ -99,10 +98,9 @@ const io = new Server(server, {
   }
 });
 
-// Phase 2 Scaling: Attach Redis Adapter for horizontal scale across Node instances
-const pubClient = createRedisClient();
-const subClient = createRedisClient();
-io.adapter(createAdapter(pubClient, subClient));
+// Phase 2 Scaling: Redis Adapter disabled due to ioredis incompatibility
+// Using standard Socket.io in-memory adapter safely to prevent boot crash.
+logger.info('[Socket.io] Running with default in-memory adapter safely.');
 
 // Set Socket.io instance inside Express app to access in controllers
 app.set('io', io);

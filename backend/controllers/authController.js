@@ -57,7 +57,7 @@ export const requestOtp = async (req, res) => {
       demoOtp: generatedOtp // Kept for hackathon fallback purposes
     });
   } catch (error) {
-    Sentry.captureException(error);
+    if (process.env.SENTRY_DSN) Sentry.captureException(error);
     return res.status(500).json({ success: false, message: error.message });
   }
 };
@@ -97,7 +97,7 @@ export const verifyOtp = async (req, res) => {
           priority: 'High',
           time: new Date().toLocaleTimeString()
         });
-        Sentry.captureMessage(`Repeated failed OTP attempts for ${mobile}`, 'warning');
+        if (process.env.SENTRY_DSN) Sentry.captureMessage(`Repeated failed OTP attempts for ${mobile}`, 'warning');
         return res.status(429).json({ success: false, message: 'Max verification attempts exceeded. Please request a new OTP.' });
       }
 
@@ -148,7 +148,7 @@ export const verifyOtp = async (req, res) => {
       }
     });
   } catch (error) {
-    Sentry.captureException(error);
+    if (process.env.SENTRY_DSN) Sentry.captureException(error);
     return res.status(500).json({ success: false, message: error.message });
   }
 };
@@ -194,7 +194,7 @@ export const staffLogin = async (req, res) => {
           time: new Date().toLocaleTimeString()
         });
       }
-      Sentry.captureMessage(`Failed staff login attempt for: ${emailClean}`, 'warning');
+      if (process.env.SENTRY_DSN) Sentry.captureMessage(`Failed staff login attempt for: ${emailClean}`, 'warning');
       return res.status(401).json({
         success: false,
         message: 'Invalid email or password'
@@ -222,7 +222,7 @@ export const staffLogin = async (req, res) => {
     });
 
   } catch (error) {
-    Sentry.captureException(error);
+    if (process.env.SENTRY_DSN) Sentry.captureException(error);
     return res.status(500).json({
       success: false,
       message: error.message
